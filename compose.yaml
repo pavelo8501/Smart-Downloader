@@ -1,0 +1,48 @@
+
+networks:
+  docker.network:
+    driver: bridge
+
+services:
+  php:
+    build: ./docker/php
+    restart: unless-stopped
+    container_name: docker.php
+    tty: true
+    depends_on:
+      - postgres
+    networks:
+      - docker.network
+    volumes:
+      - .:/var/www
+
+  nginx:
+    build: ./docker/nginx
+    container_name: docker.nginx
+    restart: unless-stopped
+    tty: true
+    depends_on:
+      - php
+    ports:
+      - "433:433"
+      - "80:80"
+    networks:
+      - docker.network
+    volumes:
+      - .:/var/www
+
+  postgres:
+    image: postgres:17-alpine
+    container_name: postgres-db
+    restart: unless-stopped
+    tty: true
+    environment:
+      POSTGRES_DB: test_db
+      POSTGRES_USER: postgresuser
+      POSTGRES_PASSWORD: somepassword
+    ports:
+      - "5432:5442"
+    networks:
+      - docker.network
+    volumes:
+      - "./docker/postgres/dbdata:/var/lib/postgresql/data"
