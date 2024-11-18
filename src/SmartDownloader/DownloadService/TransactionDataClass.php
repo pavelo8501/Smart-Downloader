@@ -3,9 +3,9 @@
 
 namespace SmartDownloader\Services\DownloadService\Models;
 
+use SmartDownloader\Handlers\DataClassBase;
 
-
-final class TransactionDataClass 
+final class TransactionDataClass  extends DataClassBase
 {
 
     public static int $id = 0;
