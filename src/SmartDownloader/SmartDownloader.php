@@ -11,19 +11,19 @@ class SmartDownloader
     private SDConfiguration $config;
     private ListenerService $listenerService;
 
-
-    public static function registerService(ListenerService $service){
-        self::$listenerService = $service;
-    }
-
-
-    public function __construct(callable $callback = null){
+    public function __construct(callable $callback){
+        $this->config = new SDConfiguration();
         if ($callback) {
             $callback($this->config);
         }
     }
 
-    function makeConnection(DownloadRequest $request){
+    public static function registerService(ListenerService $service) {
+        self::$listenerService = $service;
+    }
+
+    function makeConnection(string $url, string $path){
+        $request = new DownloadRequest($url = $url, $url = $path);
         $this->listenerService->download($request);
     }
 
