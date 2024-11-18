@@ -1,0 +1,4 @@
+ File downloader will represent itself as a wery robust and highly modular class.
+ Thus makeing it applicable for any framework.  Smart Downloader Class will be developed in vanila PHP.
+
+ 
