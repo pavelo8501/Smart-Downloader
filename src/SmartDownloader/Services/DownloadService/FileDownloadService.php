@@ -5,6 +5,8 @@ namespace SmartDownloader\Services\DownloadService;
 use SmartDownloader\Models\DownloadRequest;
 use SmartDownloader\SmartDownloader;
 use SmartDownloader\Services\DownloadService\DownloadConnectorInterface;
+use SmartDownloader\Services\DownloadService\Models\DownloadDataClass;
+use SmartDownloader\Services\ListenerService\Models\DataContainer;
 
 class FileDownloadService {
 
@@ -12,11 +14,16 @@ class FileDownloadService {
 
 
     private $connectorPlugin;
+    private DataContainer $dataContainerInstance;
 
-    public function __construct(?DownloadConnectorInterface $connectorPlugin = null) {
-        if($connectorPlugin != null){
-            $this->connectorPlugin = $connectorPlugin;
-        }
+    public function __construct(
+         DataContainer $dataContainerInstance,
+        ?DownloadConnectorInterface $connectorPlugin = null
+        ) {
+            $this->$dataContainerInstance = $dataContainerInstance;
+            if($connectorPlugin != null){
+                $this->connectorPlugin = $connectorPlugin;
+            }
         // $this->parentService = $parentService;
     }
 
@@ -26,7 +33,10 @@ class FileDownloadService {
     //Range: bytes=0-1023
 
     public function handleProgress(int $bytesStarted, int $bytesTransferred, int $bytesMax): void {
-        echo "Download progress: {$bytesTransferred}/{$bytesMax} bytes\n";
+        $downloadData = new DownloadDataClass();
+        $downloadData->bytesStarted = $bytesStarted;
+        $downloadData->bytesTransferred = $bytesTransferred;
+        $downloadData->bytesMax = $bytesMax;
     }
 
 
@@ -39,7 +49,13 @@ class FileDownloadService {
 
     public function initializeDownload(DownloadRequest $request): DownloadRequest {
     
-        return $this->fakeConectionResponse($request);
+        $connectionRequest =  $this->fakeConectionResponse($request);
+        $downloadData = new DownloadDataClass();
+
+        $this->dataContainerInstance->registerNewConnection(
+            $this->fakeConectionResponse($request),
+            $downloadData
+        );
 
 
         // $this->connectorPlugin->downloadFile(
@@ -47,6 +63,6 @@ class FileDownloadService {
         //     1024,
         //     [$this, 'handleProgress']
         // );
-        
+        return $connectionRequest;
     }
 }

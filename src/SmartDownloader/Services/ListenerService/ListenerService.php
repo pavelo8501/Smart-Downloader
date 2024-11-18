@@ -18,15 +18,7 @@ class ListenerService{
     private DataContainer $transactionContainer;
     private FileDownloadService $fileDownloader;
 
-
-    private function initUpdater(Callback $convert): void {
-        if(is_null($this->transactionContainer)){
-            $this->transactionContainer = new DataContainer(TransactionDataClass::class, $convert);
-        }
-    }
-    
     public function convert(DownloadRequest $download): TransactionDataClass {
-
         $newTransaction = new TransactionDataClass();
         $newTransaction->url  =   $download->url;
         $newTransaction->path  =  $download->path;
@@ -34,19 +26,19 @@ class ListenerService{
     }
 
     public function __construct(SmartDownloader $parent, Callback $convert){
-       // $this->parentSD = $parent;
-        $this->fileDownloader = new FileDownloadService();
+        // $this->parentSD = $parent;
+        $this->transactionContainer = new DataContainer(TransactionDataClass::class, $convert);
+        $this->fileDownloader = new FileDownloadService($this->transactionContainer);
+    }
 
-        if(!is_null($convert)){
-            $this->initUpdater($convert);
-        }
+    public function  initializeConnection(DownloadRequest $request){
+        $this->fileDownloader->initializeDownload($request);
     }
 
     public function download(DownloadRequest $downloadRequest): void {
        $count = $this->transactionContainer->getCountByPropType(TransactionDataClass::$status::IN_PROGRESS);
         if($count <= 5){
           $connectionRequest = $this->fileDownloader->initializeDownload($downloadRequest);
-          $this->transactionContainer->registerNewConnection($connectionRequest);
         }
     }
 }

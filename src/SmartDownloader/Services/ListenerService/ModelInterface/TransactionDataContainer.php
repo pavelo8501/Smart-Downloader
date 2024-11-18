@@ -4,6 +4,7 @@ namespace SmartDownloader\Services\ListenerService\ModelInterfaces;
 
 use SmartDownloader\Models\Download;
 use SmartDownloader\Models\DownloadRequest;
+use SmartDownloader\Services\DownloadService\Models\DownloadDataClass;
 use SmartDownloader\Services\DownloadService\Models\TransactionDataClass;
 
 interface TransactionDataContainer{
@@ -12,11 +13,8 @@ interface TransactionDataContainer{
     * @template TTransactionData
     * @param TDownload $download
     * @param callable $converter
-    * @return TTransactionData|null
     */
-    function newRecord(DownloadRequest $download):TransactionDataClass|null;
-
-    function registerNewConnection(DownloadRequest $download):void;
+    function registerNewConnection(DownloadRequest $download, DownloadDataClass $downloadData):void;
 
 
 }

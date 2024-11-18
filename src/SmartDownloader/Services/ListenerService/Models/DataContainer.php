@@ -8,6 +8,7 @@ use PHPUnit\Framework\Constraint\Callback;
 use PHPUnit\Util\Http\Downloader;
 use SmartDownloader\Models\Download;
 use SmartDownloader\Models\DownloadRequest;
+use SmartDownloader\Services\DownloadService\Models\DownloadDataClass;
 use SmartDownloader\Services\DownloadService\Models\TransactionDataClass;
 use SmartDownloader\Services\ListenerService\ModelInterfaces\TransactionDataContainer;
 
@@ -33,18 +34,11 @@ class DataContainer implements TransactionDataContainer{
         return null;
     }
 
-    function registerNewConnection(DownloadRequest $download):void{
+    function registerNewConnection(DownloadRequest $download,DownloadDataClass $downloadData):void{
         $newTransaction = new TransactionDataClass();
         $newTransaction->url  =   $download->url;
         $newTransaction->path  =  $download->path;
         $this->records[] = $newTransaction;
-    }
-
-    function newRecord(DownloadRequest $download): TransactionDataClass | null{
-
-        $transaction  = $this->conversion($download);
-        $this->records[] = $transaction;
-        return $transaction;
     }
 
     function getCountByPropType(mixed $type): int{
