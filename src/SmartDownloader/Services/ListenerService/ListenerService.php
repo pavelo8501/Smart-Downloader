@@ -6,6 +6,7 @@ use PhpParser\Node\Expr\CallLike;
 use PHPUnit\Framework\Constraint\Callback;
 use SmartDownloader\Models\Download;
 use SmartDownloader\Models\DownloadRequest;
+use SmartDownloader\Services\DownloadService\FileDownloadService;
 use SmartDownloader\Services\DownloadService\Models\TransactionDataClass;
 use SmartDownloader\Services\ListenerService\Models\DataContainer;
 use SmartDownloader\SmartDownloader;
@@ -15,6 +16,7 @@ class ListenerService{
     private SmartDownloader $parentSD;
 
     private DataContainer $transactionContainer;
+    private FileDownloadService $fileDownloader;
 
 
     private function initUpdater(Callback $convert): void {
@@ -33,16 +35,18 @@ class ListenerService{
 
     public function __construct(SmartDownloader $parent, Callback $convert){
        // $this->parentSD = $parent;
+        $this->fileDownloader = new FileDownloadService();
 
         if(!is_null($convert)){
             $this->initUpdater($convert);
         }
     }
 
-    public function download(DownloadRequest $download): void {
+    public function download(DownloadRequest $downloadRequest): void {
        $count = $this->transactionContainer->getCountByPropType(TransactionDataClass::$status::IN_PROGRESS);
         if($count <= 5){
-            $this->transactionContainer->newRecord($download);
+          $connectionRequest = $this->fileDownloader->initializeDownload($downloadRequest);
+          $this->transactionContainer->registerNewConnection($connectionRequest);
         }
     }
 }

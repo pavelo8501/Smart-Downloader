@@ -27,19 +27,17 @@ class DataContainer implements TransactionDataContainer{
     }
 
     private function conversion(DownloadRequest $download): TransactionDataClass | null{
-
-
         if( $this->converter != null){
-           $transaction =  call_user_func_array($this->converter);
-
-            if($transaction != null){
-                return $transaction;
-            }
             return null;
         }
-
-
         return null;
+    }
+
+    function registerNewConnection(DownloadRequest $download):void{
+        $newTransaction = new TransactionDataClass();
+        $newTransaction->url  =   $download->url;
+        $newTransaction->path  =  $download->path;
+        $this->records[] = $newTransaction;
     }
 
     function newRecord(DownloadRequest $download): TransactionDataClass | null{
