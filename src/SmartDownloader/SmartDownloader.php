@@ -14,7 +14,7 @@ class SmartDownloader
 
     
     public function __construct(callable $callback = null){
-        $this->listenerService = new ListenerService($this);
+       // $this->listenerService
         if ($callback) {
             $callback($this->config);
         }

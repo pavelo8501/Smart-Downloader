@@ -12,8 +12,7 @@ abstract class DataClassBase
 
     public $properties = [];
 
-    public function __construct(mixed ...$values)
-    {
+    public function __construct(mixed ...$values){
         $this->properties = $values;
     }
 
