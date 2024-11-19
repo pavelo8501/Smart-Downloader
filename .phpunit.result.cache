@@ -1,0 +1,1 @@
+{"version":1,"defects":{"TransactionDataClassTest::testPropertiesArrayInitialized":7,"TransactionDataClassTest::testInitialValues":8,"TransactionDataClassTest::testNotifyUpdated":8},"times":{"TransactionDataClassTest::testInitialValues":0.004,"TransactionDataClassTest::testPropertiesArrayInitialized":0,"TransactionDataClassTest::testNotifyUpdated":0}}

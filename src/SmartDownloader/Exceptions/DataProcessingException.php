@@ -9,6 +9,7 @@ enum DataProcessingExceptionCode : int {
     case NO_PARAMS  = 1;
     case PROPERTY_MISSING = 2;
     case NO_PROPERTY_BY_VALUE = 3;
+    case PARENT_INIT_FAILED = 4;
 }
 
 

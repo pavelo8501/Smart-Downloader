@@ -64,7 +64,9 @@ class ListenerService{
 
         $count = $this->transactionContainer->getCountByPropType(TransactionDataClass::$status::IN_PROGRESS);
         if ($count <= $this->config->max_downloads) {
-            $downloadRequest = new DownloadRequest();
+            $downloadRequest = new DownloadRequest(
+                
+            );
             $downloadRequest->file_url = $request->file_url;
             $downloadRequest->file_path = $this->config->download_dir + "//filename.ext";
             echo var_dump($downloadRequest);

@@ -103,5 +103,19 @@ class DataContainer implements TransactionDataContainer{
         throw new DataProcessingException("No object found for property {$property} and  value: {$value}", DataProcessingExceptionCode::NO_PROPERTY_BY_VALUE);
     }
 
+    function getByPropertyValue(string $property, mixed $value):TransactionDataClass{
+
+        
+        $filtered = array_filter($this->records, function ($record) use ($property,$value) {
+            if($record->properties[$property] == $value){
+                return $record->properties[$property];
+            }
+        });
+
+        if(count($filtered)>0){
+            return $filtered[0];
+        }
+        throw new DataProcessingException("No object found for property {$property} and  value: {$value}", DataProcessingExceptionCode::NO_PROPERTY_BY_VALUE);
+    }
 
 }
