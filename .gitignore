@@ -1,5 +1,6 @@
 dev_data/
 .vscode
+.idea
 /vendor/
 docker/postgres/dbdata/
 docker/nginx/logs/

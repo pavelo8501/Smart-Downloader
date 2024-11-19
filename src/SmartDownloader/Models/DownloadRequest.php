@@ -6,7 +6,7 @@ use SmartDownloader\Handlers\DataClassBase;
 
 class DownloadRequest extends DataClassBase{
 
-    public string $url;
-    public string $requestUrl;
-    public string $path;
+    public string $file_url;
+    public string $request_url;
+    public string $file_path;
 }

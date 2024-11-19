@@ -2,8 +2,7 @@
 
 namespace SmartDownloader\Services\UpdateService\UpdateConnectorPlugins;
 
-
-
+use SmartDownloader\Services\UpdateService\Interfaces\UpdateConnectorPlugins\UpdateConnectorInterface;
 
 abstract class SqlCommonConnector implements UpdateConnectorInterface {
 
@@ -16,6 +15,7 @@ abstract class SqlCommonConnector implements UpdateConnectorInterface {
     public function updateData() {
     }
 
-    public function requestData() {
+    public function getData():array|null {
+        return [];
     }
 }

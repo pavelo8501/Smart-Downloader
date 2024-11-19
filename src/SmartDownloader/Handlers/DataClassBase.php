@@ -2,11 +2,12 @@
 
 namespace SmartDownloader\Handlers;
 
+use SmartDownloader\Exceptions\DataProcessingException;
+use SmartDownloader\Exceptions\DataProcessingExceptionCode;
 use SmartDownloader\Handlers\DataHandlerTrait;
-use SmartDownloader\Handlers\DataClass;
 
-abstract class DataClassBase
-{
+
+abstract class DataClassBase{
 
     use DataHandlerTrait;
 
@@ -16,9 +17,24 @@ abstract class DataClassBase
         $this->properties = $values;
     }
 
-    public function copy(DataClass $original): DataClass
-    {
-        $copy = new  DataClass(get_object_vars($original));
-        return $copy;
+    public function copy(DataClassBase $copyTo, bool $strict = false): void{
+        foreach($copyTo->properties as $key => $value){
+            if(!key_exists($key, $this->properties)){
+                if($strict){
+                    throw new DataProcessingException("Property $key not found in source object", DataProcessingExceptionCode::PROPERTY_MISSING);
+                }
+                continue;
+            }
+            $this->properties[$key] = $value;
+        }
+    }
+
+    public function loadFromArray(array $data): void{
+        foreach($data as $key => $value){
+            if(!key_exists($key, $this->properties)){
+                throw new DataProcessingException("Property $key not found in source object", DataProcessingExceptionCode::PROPERTY_MISSING);
+            }
+            $this->properties[$key] = $value;
+        }
     }
 }
