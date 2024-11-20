@@ -7,11 +7,11 @@ use SmartDownloader\Handlers\DataClassBase;
 
 class DownloadDataClass  extends DataClassBase {
 
-    public  int $id = 0;
-    public  int $bytes_started = 0;
-    public  int $bytes_transferred = 0;
-    public  int $bytesMax = 0;
+    protected int $id = 0;
+    protected int $bytes_start = 0;
+    protected int $bytes_transferred = 0;
+    protected int $bytes_max = 0;
+    protected int $chunk_size = 0;
  
-    public function __construct() {
-    }
+
 }

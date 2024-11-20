@@ -27,24 +27,29 @@ class FileDownloadService {
     // Accept: */*
     //Range: bytes=0-1023
 
-    public function handleProgress(
-        int $bytesStarted,
-        int $bytesTransferred,
-        int $bytesMax
+    public function reportStatus(
+        bool  $multipart,
+        string  $status,
+        string  $message
     ): void {
-        $downloadData = new DownloadDataClass();
-        $downloadData->bytes_started = $bytesStarted;
-        $downloadData->bytes_transferred = $bytesTransferred;
-        $downloadData->bytesMax = $bytesMax;
+       echo "{$multipart} | {$status} | {$message} ";
     }
 
-    public function start(string $url, int $chunkSize, TransactionDataClass $transaction): DownloadRequest {
+    public function handleProgress(
+        DownloadDataClass $download_data,
+    ): void {
+       
+    }
 
+    public function start(string $url, int $chunk_size, TransactionDataClass $transaction): DownloadRequest {
         $this->currentTransaction = $transaction;
-        
+        $download_data = new DownloadDataClass();
+        $transaction->copy($download_data);
+        $download_data->chunk_size = $chunk_size;
         $this->connectorPlugin->downloadFile(
             $url,
-            $chunkSize,
+            $download_data,
+            [$this, 'reportStatus'],
             [$this, 'handleProgress']
         );
         return $this->request;

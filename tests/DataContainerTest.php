@@ -9,8 +9,6 @@ use SmartDownloader\Services\DownloadService\Models\TransactionDataClass;
 class DataContainerTest extends TestCase
 {
 
-   
-
 
     public function testRegisterNew(){
         $dataContainer = new DataContainer();

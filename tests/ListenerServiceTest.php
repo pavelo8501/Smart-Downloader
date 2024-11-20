@@ -12,6 +12,7 @@ class ListenerServiceTest extends TestCase {
     private SDConfiguration $mockConfig;
 
     protected function setUp(): void {
+        
         $this->mockSmartDownloader = $this->createMock(SmartDownloader::class);
         $this->mockConfig = $this->createMock(SDConfiguration::class);
         $this->listenerService = new ListenerService($this->mockSmartDownloader, $this->mockConfig);
