@@ -1,6 +1,6 @@
 <?php
 
-namespace SmartDownloader\Services\DownloadService\Models;
+namespace SmartDownloader\Services\DownloadService\Enums;
 
 enum TransactionStatus: int
 {

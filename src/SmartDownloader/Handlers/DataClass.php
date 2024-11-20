@@ -4,6 +4,7 @@ namespace SmartDownloader\Handlers;
 
 use SmartDownloader\Exceptions\DataProcessingException;
 use SmartDownloader\Exceptions\DataExceptionEnum;
+use SmartDownloader\Exceptions\DataProcessingExceptionCode;
 use SmartDownloader\Handlers\DataHandlerTrait;
 
 
@@ -18,7 +19,7 @@ class DataClass
     public function __construct(mixed ...$values)
     {
         if (count($values) === 0) {
-            throw new DataProcessingException(DataExceptionEnum::NO_PARAMS);
+            throw new DataProcessingException("Constructor requires at least one parameter", DataProcessingExceptionCode::NO_PARAMS);
         }
     }
 

@@ -4,16 +4,27 @@ namespace SmartDownloader\Exceptions;
 
 use Exception;
 
-
-enum DataExceptionEnum : string
-{
-    case  NO_PARAMS  = 'No parameters provided for the object';
-    case  PROPERTY_MISSING = "Property does not exist in the object";
+enum DataProcessingExceptionCode : int {
+    case UNDEFINED  = 0;
+    case NO_PARAMS  = 1;
+    case PROPERTY_MISSING = 2;
+    case NO_PROPERTY_BY_VALUE = 3;
+    case PARENT_INIT_FAILED = 4;
+    case INVALID_DATA_SUPPLIED = 5;
 }
 
-class DataProcessingException extends Exception
-{
-    public function __construct(DataExceptionEnum $exceptionEnum ,  $code = 0, \Throwable $previous = null ) {
-        parent::__construct($exceptionEnum, $code, $previous);
-     }
+
+class DataProcessingException extends Exception{
+
+    private DataProcessingExceptionCode  $exceptionCode = DataProcessingExceptionCode::UNDEFINED;
+    private string $exceptionMessage;
+
+    public function __construct(string $exceptionMessage, ?DataProcessingExceptionCode $code, \Throwable $previous = null ) {
+        $this->exceptionMessage = $exceptionMessage;
+        if($code !== null){
+            $this->exceptionCode = $code;
+        }
+
+        parent::__construct($this->exceptionMessage, $this->exceptionCode->value, $previous);
+    }
 }

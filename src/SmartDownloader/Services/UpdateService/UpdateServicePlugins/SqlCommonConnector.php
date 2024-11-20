@@ -1,9 +1,8 @@
 <?php
 
-namespace SmartDownloader\Services\UpdateService\UpdateConnectorPlugins;
+namespace SmartDownloader\Services\UpdateService\UpdateServicePlugins;
 
-
-
+use SmartDownloader\Services\UpdateService\Interfaces\UpdateConnectorInterface;
 
 abstract class SqlCommonConnector implements UpdateConnectorInterface {
 
@@ -16,6 +15,11 @@ abstract class SqlCommonConnector implements UpdateConnectorInterface {
     public function updateData() {
     }
 
-    public function requestData() {
+    public function selectData():array|null {
+        return [];
+    }
+
+    public function pickData():mixed{
+        return null;
     }
 }

@@ -6,25 +6,20 @@ use SmartDownloader\Models\DownloadRequest;
 use SmartDownloader\SmartDownloader;
 use SmartDownloader\Services\DownloadService\DownloadConnectorInterface;
 use SmartDownloader\Services\DownloadService\Models\DownloadDataClass;
+use SmartDownloader\Services\DownloadService\Models\TransactionDataClass;
 use SmartDownloader\Services\ListenerService\Models\DataContainer;
 
 class FileDownloadService {
 
-    // private SmartDownloader $parentService;
+    private DownloadConnectorInterface $connectorPlugin;
+
+    private DownloadRequest $request;
+
+    private TransactionDataClass $currentTransaction;
 
 
-    private $connectorPlugin;
-    private DataContainer $dataContainerInstance;
-
-    public function __construct(
-         DataContainer $dataContainerInstance,
-        ?DownloadConnectorInterface $connectorPlugin = null
-        ) {
-            $this->$dataContainerInstance = $dataContainerInstance;
-            if($connectorPlugin != null){
-                $this->connectorPlugin = $connectorPlugin;
-            }
-        // $this->parentService = $parentService;
+    public function __construct(DownloadConnectorInterface $connectorPlugin) {
+        $this->connectorPlugin = $connectorPlugin;
     }
 
     //content-range
@@ -32,37 +27,34 @@ class FileDownloadService {
     // Accept: */*
     //Range: bytes=0-1023
 
-    public function handleProgress(int $bytesStarted, int $bytesTransferred, int $bytesMax): void {
+    public function handleProgress(
+        int $bytesStarted,
+        int $bytesTransferred,
+        int $bytesMax
+    ): void {
         $downloadData = new DownloadDataClass();
-        $downloadData->bytesStarted = $bytesStarted;
-        $downloadData->bytesTransferred = $bytesTransferred;
+        $downloadData->bytes_started = $bytesStarted;
+        $downloadData->bytes_transferred = $bytesTransferred;
         $downloadData->bytesMax = $bytesMax;
     }
 
+    public function start(string $url, int $chunkSize, TransactionDataClass $transaction): DownloadRequest {
 
-    public function fakeConectionResponse(DownloadRequest $request): DownloadRequest {
-        $request->url = "someUrl";
-        $request->requestUrl = 'localhost:4200//api/requests';
-        return $request;
+        $this->currentTransaction = $transaction;
+        
+        $this->connectorPlugin->downloadFile(
+            $url,
+            $chunkSize,
+            [$this, 'handleProgress']
+        );
+        return $this->request;
     }
 
+    public function stop(){
 
-    public function initializeDownload(DownloadRequest $request): DownloadRequest {
-    
-        $connectionRequest =  $this->fakeConectionResponse($request);
-        $downloadData = new DownloadDataClass();
+    }
 
-        $this->dataContainerInstance->registerNewConnection(
-            $this->fakeConectionResponse($request),
-            $downloadData
-        );
+    public function resume(string $url, int $chunkSize, int $byteOffset){
 
-
-        // $this->connectorPlugin->downloadFile(
-        //     $url,
-        //     1024,
-        //     [$this, 'handleProgress']
-        // );
-        return $connectionRequest;
     }
 }
