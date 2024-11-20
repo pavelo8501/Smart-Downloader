@@ -1,0 +1,16 @@
+{
+    "extends": "@vue/tsconfig/tsconfig.json",
+    "include": [
+        "resources/**/*.ts",
+        "resources/**/*.d.ts",
+        "resources/**/*.vue",
+        "src", "vite-env.d.ts"
+    ],
+    "compilerOptions": {
+    "strict": true,
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["resources/ts/*"]
+    }
+  }
+}
