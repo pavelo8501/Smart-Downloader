@@ -25,21 +25,14 @@ class FileDownloadService {
     }
 
 
-    public function handleProgress(
-        DownloadDataClass $downloadData 
-    ): void {
+    public function handleProgress(DownloadDataClass $downloadData ): void {
 
        
     }
 
     
     
-    public function reportStatus(
-        bool  $multipart,
-        string  $status,
-        string  $message
-    ): void {
-
+    public function reportStatus(bool  $multipart, string  $status, string  $message): void {
         if($status == "complete"){
         
         }
