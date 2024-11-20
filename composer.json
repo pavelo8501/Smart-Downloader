@@ -21,6 +21,12 @@
      "scripts": {
         "launch": [
             "php index.php"
+        ],
+        "docker_run" : [
+            "docker-compose up --build -d"
+        ],
+        "docker_stoop": [
+            "docker-compose down"
         ]
     }
 }
