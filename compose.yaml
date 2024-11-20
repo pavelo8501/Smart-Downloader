@@ -37,11 +37,11 @@ services:
     restart: unless-stopped
     tty: true
     environment:
-      POSTGRES_DB: test_db
+      POSTGRES_DB: downloader_db
       POSTGRES_USER: postgresuser
       POSTGRES_PASSWORD: somepassword
     ports:
-      - "5432:5442"
+      - "5432:5432"
     networks:
       - docker.network
     volumes:
