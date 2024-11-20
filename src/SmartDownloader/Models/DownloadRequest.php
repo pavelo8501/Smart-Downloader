@@ -18,11 +18,5 @@ class DownloadRequest extends DataClassBase{
         $this->file_url = $file_url;
         $this->request_url = $request_url;
         $this->file_path = $file_path;
-
-        parent::__construct(
-            "file_url",
-            "request_url",
-            "file_path"
-        );
     }
 }

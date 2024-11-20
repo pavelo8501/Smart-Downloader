@@ -19,6 +19,7 @@ class TransactionDataClass  extends DataClassBase
     protected  string $file_path = "";
     protected  int $chunk_size = 1024;
     protected  int $bytes_saved = 0;
+    
     protected  TransactionStatus $status = TransactionStatus::UNINITIALIZED;
 
     private ?\Closure $onUpdatedCallback = null;

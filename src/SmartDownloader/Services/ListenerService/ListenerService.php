@@ -69,13 +69,11 @@ class ListenerService{
 
         $count = $this->transactionContainer->getCountByPropType("status", TransactionStatus::IN_PROGRESS);
         if ($count <= $this->config->max_downloads) {
-            $downloadRequest = new DownloadRequest(
-
-            );
+            $downloadRequest = new DownloadRequest();
             $downloadRequest->file_url = $request->file_url;
             $downloadRequest->file_path = $this->config->download_dir + "//filename.ext";
             $newTransaction = $this->transactionContainer->registerNew($downloadRequest);
-            //$this->fileDownloader->startDownload($request->file_url, $this->config->chunk_size, $newTransaction);
+            $this->fileDownloader->start($request->file_url, $this->config->chunk_size, $newTransaction);
             $this->notifyTaskInitiated(ListenerTasks::DOWNLOAD_STARTED, $newTransaction);
         }
     }

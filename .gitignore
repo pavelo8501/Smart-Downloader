@@ -4,3 +4,6 @@ dev_data/
 /vendor/
 docker/postgres/dbdata/
 docker/nginx/logs/
+config.php
+index.php
+pull.txt

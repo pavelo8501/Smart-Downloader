@@ -8,6 +8,10 @@ enum OperationsExceptionCode: int {
     case UNDEFINED  = 0;
     case SOURCE_UNDEFINED  = 1;
     case TRANSACTION_NOT_FOUND = 2;
+    case COMPONENT_UNINITIALIZED = 3;
+
+    case DOWNLOAD_INITIALIZATION_FAIL = 4;
+    case DOWNLOAD_PLUGIN_FAILURE = 5;
 }
 
 

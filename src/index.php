@@ -8,11 +8,17 @@ use Exception;
 use SmartDownloader\Enumerators\RateExceedAction;
 use SmartDownloader\Models\SDConfiguration;
 use SmartDownloader\SmartDownloader;
+use SmartDownloader\Models\ApiRequest;
 
 error_reporting(E_ALL);
 ini_set('display_errors', 'On');
 
-require("./../vendor/autoload.php");
+$autoload_path = __DIR__ . "/../vendor/autoload.php";
+
+if(file_exists($autoload_path)){
+    require($autoload_path);
+}
+
 
 $downloadManager = new SmartDownloader(function (SDConfiguration $config) {
     $config->temp_dir = "temp";
@@ -37,8 +43,14 @@ try {
         }
         $post_request = json_decode($post_input, true);
     }
+    
 
-    $downloadManager->processRequest($post_request);
+     $fakeRequest = new ApiRequest();
+     $fakeRequest->action = "start";
+     $fakeRequest->file_url = "https://storage.googleapis.com/public_test_access_ae/output_60sec.mp4";
+
+     
+    $downloadManager->processRequest($fakeRequest);
 
 
 }catch(Exception $ex){
