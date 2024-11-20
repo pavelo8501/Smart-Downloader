@@ -8,58 +8,52 @@ use SmartDownloader\Services\DownloadService\Models\TransactionDataClass;
 
 class DataContainerTest extends TestCase
 {
-    public function testRegisterNew()
-    {
+
+   
+
+
+    public function testRegisterNew(){
         $dataContainer = new DataContainer();
         $downloadRequest = $this->createMock(DownloadRequest::class);
-        $downloadRequest->method('copy')->willReturn(true);
-
+       
         $transaction = $dataContainer->registerNew($downloadRequest);
 
         $this->assertInstanceOf(TransactionDataClass::class, $transaction);
     }
 
-    public function testRemove()
-    {
+    public function testRemove(){
         $dataContainer = new DataContainer();
-        $transaction = $this->createMock(TransactionDataClass::class);
-
-        $dataContainer->registerNew($this->createMock(DownloadRequest::class));
+        
+        $transaction = $dataContainer->registerNew($this->createMock(DownloadRequest::class));
         $result = $dataContainer->remove($transaction);
 
         $this->assertTrue($result);
     }
 
-    public function testGetCountByPropType()
-    {
+    public function testGetCountByPropType(){
         $dataContainer = new DataContainer();
         $downloadRequest = $this->createMock(DownloadRequest::class);
         $dataContainer->registerNew($downloadRequest);
 
-        $count = $dataContainer->getCountByPropType(TransactionDataClass::class);
+        $count = $dataContainer->getCountByPropType("status", TransactionStatus::UNINITIALIZED);
 
         $this->assertEquals(1, $count);
     }
 
-    public function testGetByValue()
-    {
+    public function testGetByValue(){
         $dataContainer = new DataContainer();
-        $downloadRequest = $this->createMock(DownloadRequest::class);
+
+        $downloadRequest = new DownloadRequest();
+        $downloadRequest->file_url = 'http://test.com';
+
         $transaction = $dataContainer->registerNew($downloadRequest);
 
-        $transaction->getProperties()['testProperty'] = (object)['value' => 'testValue'];
-
-        $result = $dataContainer->getByValue('testProperty', 'testValue');
-        $this->assertSame($transaction, $result);
-
-        //$result = $dataContainer->getByValue(TransactionDataClass::$status, TransactionStatus::UNINITIALIZED);
-
+        $result = $dataContainer->getByPropertyValue('file_url', 'http://test.com');
+        $this->assertEquals($transaction->file_url, $result);
     }
 
-    public function testSubscribeUpdates()
-    {
+    public function testSubscribeUpdates(){
         $dataContainer = new DataContainer();
-       // $transaction = $this->createMock(TransactionDataClass::class);
 
         $transaction =  $dataContainer->registerNew($this->createMock(DownloadRequest::class));
 
@@ -70,10 +64,44 @@ class DataContainerTest extends TestCase
         });
 
         $transaction->notifyUpdated();
-
-    
-       // $dataContainer->onTransactionUpdated($transaction);
-
         $this->assertTrue($callbackCalled);
+    }
+
+
+    public function supplyTransactions(): array{
+
+        $transactions = [];
+       
+        $transaction1 = new TransactionDataClass();
+        $transaction1->loadFromArray([
+            'id' => 1,
+            'url' => 'http://test.com',
+            'path' => '/path/to/file',
+            'chunk_size' => 2048,
+            'bytes_saved' => 1024,
+            'status' => TransactionStatus::IN_PROGRESS
+        ]);
+
+        $transaction2 = new TransactionDataClass();
+        $transaction2->loadFromArray([
+            'id' => 2,
+            'url' => 'http://test2.com',
+            'path' => '/path/to/file2',
+            'chunk_size' => 2048,
+            'bytes_saved' => 1024,
+            'status' => TransactionStatus::IN_PROGRESS
+        ]);
+        $transactions[] = $transaction1;
+        $transactions[] = $transaction2;
+
+        return $transactions;
+    }
+
+    public function testRequestData(){
+
+        $callback = [$this, 'supplyTransactions'];
+        $dataContainer = new DataContainer($callback);
+
+        $this->assertEquals(2, $dataContainer->getCountByPropType("status", TransactionStatus::IN_PROGRESS));
     }
 }

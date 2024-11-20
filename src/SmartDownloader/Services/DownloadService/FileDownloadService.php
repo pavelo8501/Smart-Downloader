@@ -33,8 +33,8 @@ class FileDownloadService {
         int $bytesMax
     ): void {
         $downloadData = new DownloadDataClass();
-        $downloadData->bytesStarted = $bytesStarted;
-        $downloadData->bytesTransferred = $bytesTransferred;
+        $downloadData->bytes_started = $bytesStarted;
+        $downloadData->bytes_transferred = $bytesTransferred;
         $downloadData->bytesMax = $bytesMax;
     }
 
@@ -55,6 +55,6 @@ class FileDownloadService {
     }
 
     public function resume(string $url, int $chunkSize, int $byteOffset){
-        
+
     }
 }

@@ -11,62 +11,62 @@ abstract class DataClassBase{
 
     use DataHandlerTrait;
 
-    protected $properties = [];
+    public array $keyProperties = [];
 
-    public static function existsProperty(DataClassBase $dataClass,  string $name): bool {
-        return key_exists($name, $dataClass->properties);
-    }
-
-    public function __construct(string  ...$propertyNames){
-        foreach($propertyNames as $propertyName){
-            $this->properties[$propertyName] = null;
+    public function reflectProtectedProperties(): void {
+        if (count($this->keyProperties) == 0) {
+            $child_class = new \ReflectionClass($this);
+            $allProperties = $child_class->getProperties();
+            $protectedProperties = array_filter(
+                $allProperties,
+                fn($property) => $property->isProtected()
+            );
+            foreach($protectedProperties as $property){
+                $this->keyProperties[$property->getName()] = $property->getValue($this);
+            }
         }
     }
 
-    protected function initProperties(array $properties): void {
-        $this->properties = $properties;
+
+    public function __get($name) {
+       $this->reflectProtectedProperties();
+       if(key_exists($name, $this->keyProperties)){
+           return $this->keyProperties[$name];
+       }
     }
 
-
-    public function getProperties(): array {
-        return $this->properties;
+    public function __set($name, $value) {
+        $this->reflectProtectedProperties();
+        if (key_exists($name, $this->keyProperties)) {
+            $this->keyProperties[$name] = $value;
+        }
     }
-
-
-    // public function __get($name) {
-    //     if (self::existsProperty($this, $name)) {
-    //         return $this->properties[$name];
-    //     }
-    //     return null;
-    // }
-
-    // public function __set($name, $value) {
-    //     if (self::existsProperty($this, $name)) {
-    //         $this->properties[$name] = $value;
-    //     }
-    // }
-
-    //abstract protected function initProperties(): void;
 
     public function copy(DataClassBase $copyTo, bool $strict = false): void{
-
-        foreach($copyTo->properties as $key => $value){
-            if(!key_exists($key, $this->properties)){
+       
+        foreach(array_keys($copyTo->keyProperties) as $key){
+            if(!key_exists($key, $this->keyProperties)){
                 if($strict){
                     throw new DataProcessingException("Property $key not found in source object", DataProcessingExceptionCode::PROPERTY_MISSING);
                 }
                 continue;
+            }else{
+                $copyTo->{$key} = $this->{$key};
+                $copyTo->keyProperties[$key]  = $this->{$key};
             }
-            $this->properties[$key] = $value;
         }
     }
 
-    public function loadFromArray(array $data): void{
+    public function loadFromArray(array $data, bool $strict = false): void{
         foreach($data as $key => $value){
-            if(!key_exists($key, $this->properties)){
-                throw new DataProcessingException("Property $key not found in source object", DataProcessingExceptionCode::PROPERTY_MISSING);
+            if(!property_exists($this, $key)){
+                if($strict){
+                    throw new DataProcessingException("Property $key not found in source object", DataProcessingExceptionCode::PROPERTY_MISSING);
+                }else{
+                    continue;
+                }
             }
-            $this->properties[$key] = $value;
+            $this->{$key} = $value;
         }
     }
 }

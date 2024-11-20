@@ -11,10 +11,10 @@ trait DataHandlerTrait
         return get_object_vars($this);
     }
 
-    public function __toString(): string
-    {
-        return json_encode($this->toArray());
-    }
+    // public function __toString(): string
+    // {
+    //     return json_encode($this->toArray());
+    // }
 
     public function __($name)
     {

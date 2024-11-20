@@ -13,7 +13,7 @@ enum OperationsExceptionCode: int {
 
 class OperationsException extends Exception {
 
-    private DataProcessingExceptionCode  $exceptionCode = OperationsExceptionCode::UNDEFINED;
+    private OperationsExceptionCode  $exceptionCode = OperationsExceptionCode::UNDEFINED;
     private string $exceptionMessage;
 
     public function __construct(string $exceptionMessage, ?OperationsExceptionCode $code, \Throwable $previous = null) {
@@ -22,6 +22,6 @@ class OperationsException extends Exception {
             $this->exceptionCode = $code;
         }
 
-        parent::__construct($this->exceptionMessage, $this->exceptionCode, $previous);
+        parent::__construct($this->exceptionMessage, $this->exceptionCode->value, $previous);
     }
 }

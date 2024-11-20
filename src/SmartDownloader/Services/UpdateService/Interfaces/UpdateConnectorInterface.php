@@ -1,6 +1,6 @@
 <?php
 
-namespace SmartDownloader\Services\UpdateService\Interfaces\UpdateConnectorPlugins;
+namespace SmartDownloader\Services\UpdateService\Interfaces;
 
 interface UpdateConnectorInterface {
 
@@ -8,5 +8,7 @@ interface UpdateConnectorInterface {
 
     public function updateData();
 
-    public function getData(): array|null;
+    public function selectData(): array|null;
+
+    public function pickData(): mixed;
 }

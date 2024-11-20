@@ -10,6 +10,7 @@ enum DataProcessingExceptionCode : int {
     case PROPERTY_MISSING = 2;
     case NO_PROPERTY_BY_VALUE = 3;
     case PARENT_INIT_FAILED = 4;
+    case INVALID_DATA_SUPPLIED = 5;
 }
 
 
@@ -24,6 +25,6 @@ class DataProcessingException extends Exception{
             $this->exceptionCode = $code;
         }
 
-        parent::__construct($this->exceptionMessage, $this->exceptionCode, $previous);
+        parent::__construct($this->exceptionMessage, $this->exceptionCode->value, $previous);
     }
 }

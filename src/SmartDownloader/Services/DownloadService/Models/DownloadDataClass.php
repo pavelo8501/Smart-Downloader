@@ -5,12 +5,12 @@ namespace SmartDownloader\Services\DownloadService\Models;
 
 use SmartDownloader\Handlers\DataClassBase;
 
-final class DownloadDataClass  extends DataClassBase {
+class DownloadDataClass  extends DataClassBase {
 
-    public static int $id = 0;
-    public static int $bytesStarted =0;
-    public static int $bytesTransferred;
-    public static int $bytesMax = 0;
+    public  int $id = 0;
+    public  int $bytes_started = 0;
+    public  int $bytes_transferred = 0;
+    public  int $bytesMax = 0;
  
     public function __construct() {
     }

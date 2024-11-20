@@ -13,12 +13,62 @@ use SmartDownloader\Services\ListenerService\Interfaces\TransactionDataContainer
 
 class DataContainer implements TransactionDataContainer{
 
+    /**
+     * The records in the container.
+     *
+     * @var array[TransactionDataClass]
+     */
     private array $records = [];
 
     private ?Closure $onRecordUpdated = null;
+
+    private ?Closure $onDataRequested = null;
   
-    public function __construct(){
-       
+    public function __construct(
+        ?callable $onDataRequested = null
+    ){
+        if($onDataRequested != null){
+            if(!is_callable($onDataRequested)){
+                throw new DataProcessingException(
+                    "onDataRequested supplied to DataContainer is not callable",
+                    DataProcessingExceptionCode::INVALID_DATA_SUPPLIED
+                );
+            }
+            $this->onDataRequested = Closure::fromCallable($onDataRequested);
+            $this->requestData();
+        }
+    }
+
+
+
+    private function requestData(): void {
+        if ($this->onDataRequested != null) {
+            $transactions =  call_user_func($this->onDataRequested);
+            if (count($transactions)>0) {
+                if (!$transactions[0] instanceof TransactionDataClass) {
+                    throw new DataProcessingException("Data requested must be an array of TransactionDataClass objects", DataProcessingExceptionCode::INVALID_DATA_SUPPLIED);
+                }
+                foreach ($transactions as $transaction) {
+                    $transaction->setOnUpdatedCallback([$this, 'onTransactionUpdated']);
+                    $this->records[] = $transaction;
+                }
+            }
+        }
+    }
+
+
+    /**
+     * @return array[TransactionDataClass] The records in the container.
+     */
+    private function getRecordsByProperty(string $property, mixed $value):array{
+
+        $filtered = array_filter($this->records, function ($record) use ($property, $value) {
+            if ($record->getKeyProperties()[$property] == $value) {
+                return $record;
+            }
+        });
+
+        return $filtered;
     }
 
 
@@ -27,7 +77,7 @@ class DataContainer implements TransactionDataContainer{
      *
      * @param TransactionDataClass $transaction The transaction that was updated.
      */
-    protected function onTransactionUpdated(TransactionDataClass $transaction):void{
+    function onTransactionUpdated(TransactionDataClass $transaction):void{
         if($this->onRecordUpdated != null ){
             call_user_func($this->onRecordUpdated, $transaction);
         }
@@ -49,11 +99,14 @@ class DataContainer implements TransactionDataContainer{
      * @return TransactionDataClass The registered transaction.
      */
     function registerNew(DownloadRequest $download):TransactionDataClass{
+        
         $newTransaction = new TransactionDataClass([$this, 'onTransactionUpdated']);
         $download->copy($newTransaction);
         $this->records[] = $newTransaction;
         return $newTransaction;
     }
+
+
 
     /**
      * Removes a transaction.
@@ -76,46 +129,22 @@ class DataContainer implements TransactionDataContainer{
      * @param mixed $type The type to count.
      * @return int The count of transactions by type.
      */
-    function getCountByPropType(mixed $type): int{
-        $filtered = array_filter($this->records, function ($record) use ($type) {
-            return $record instanceof $type;
-        });
+    function getCountByPropType(string $property, mixed $value): int{
+
+        $filtered =  $this->getRecordsByProperty($property, $value);
         return count($filtered);
     }
 
     /**
-     * Gets the count of transactions by property.
+     * Gets a transaction by a property value.
      *
-     * @param string $property The property of record object.
-     * @param mixed $value The value to of the property.
-     * @return int The count of transactions by property.
+     * @param string $property The property to search by.
+     * @param mixed $value The value to search for.
+     * @return  array[TransactionDataClass] The transaction found.
      */
-    function getByValue(string $property, mixed $value):TransactionDataClass{
-        $filtered = array_filter($this->records, function ($record) use ($property,$value) {
-            if($record->properties[$property]->value == $value){
-                return $record->properties[$property]->value;
-            }
-        });
-
-        if(count($filtered)>0){
-            return $filtered[0];
-        }
-        throw new DataProcessingException("No object found for property {$property} and  value: {$value}", DataProcessingExceptionCode::NO_PROPERTY_BY_VALUE);
-    }
-
-    function getByPropertyValue(string $property, mixed $value):TransactionDataClass{
-
-        
-        $filtered = array_filter($this->records, function ($record) use ($property,$value) {
-            if($record->properties[$property] == $value){
-                return $record->properties[$property];
-            }
-        });
-
-        if(count($filtered)>0){
-            return $filtered[0];
-        }
-        throw new DataProcessingException("No object found for property {$property} and  value: {$value}", DataProcessingExceptionCode::NO_PROPERTY_BY_VALUE);
+    function getByPropertyValue(string $property, mixed $value):array{
+        $filtered =  $this->getRecordsByProperty($property, $value);
+        return $filtered;
     }
 
 }
