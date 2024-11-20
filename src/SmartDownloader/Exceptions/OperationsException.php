@@ -11,6 +11,7 @@ enum OperationsExceptionCode: int {
     case COMPONENT_UNINITIALIZED = 3;
 
     case DOWNLOAD_INITIALIZATION_FAIL = 4;
+    case DOWNLOAD_PLUGIN_FAILURE = 5;
 }
 
 

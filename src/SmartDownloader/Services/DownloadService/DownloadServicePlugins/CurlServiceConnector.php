@@ -13,7 +13,7 @@ use SmartDownloader\Services\DownloadService\Models\DownloadDataClass;
 
  class RequestDataClass{
     public bool $multipart = false;
-    public string $length = "";
+    public string $length = "0";
     public string $ranges = "";
     public ?CurlHandle $ch = null;
  }
@@ -27,6 +27,9 @@ class CurlServiceConnector implements DownloadConnectorInterface{
 
   private ?Closure $reportStatusCallback = null;
   private ?Closure $handleProgress = null;
+
+  public bool $download = true; 
+
 
   public function __construct(){ }
 
@@ -109,36 +112,53 @@ class CurlServiceConnector implements DownloadConnectorInterface{
 
   private function downloadMultipart(string $url, DownloadDataClass $download_data, $handleProgress): void{
      
-      $this->ch = curl_init();
-      if(!$this->ch){
-        throw new OperationsException("Download plugin failed to initialize", OperationsExceptionCode::SOURCE_UNDEFINED);
-      }
+    $this->ch = curl_init();
+    if(!$this->ch){
+      throw new OperationsException("Download plugin failed to initialize", OperationsExceptionCode::SOURCE_UNDEFINED);
+    }
 
-      $options = [
-        CURLOPT_URL => $url,
-        CURLOPT_CUSTOMREQUEST => "GET",
-        CURLOPT_HTTPHEADER => array("Content-Type: */*"),
-        CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_RANGE => "{$download_data->bytes_start}-{$download_data->chunk_size}"
-      ];
 
-      curl_setopt_array($this->ch, $options);
-      $chunk_data = curl_exec($this->ch);
-      if (curl_errno($this->ch)) {
-        $error_msg = curl_error($this->ch);
-        curl_close($this->ch);
-        if (is_callable($this->reportStatusCallback)) {
-            call_user_func($this->reportStatusCallback, true, "error", $error_msg);
-        }
-      }else{
+    $download_data->initializeFirstRead();
+    $options = [
+      CURLOPT_URL => $url,
+      CURLOPT_CUSTOMREQUEST => "GET",
+      CURLOPT_HTTPHEADER => array("Content-Type: */*"),
+      CURLOPT_RETURNTRANSFER => true,
+      CURLOPT_RANGE => "{$download_data->bytes_start}-{$download_data->bytes_read_to}"
+    ];
 
-        $download_data->bytes_transferred = strlen($chunk_data);
-        $download_data->bytes_max += $download_data->bytes_transferred;
+    curl_setopt_array($this->ch, $options);
 
-        if ($this->handleProgress) {
-            call_user_func($this->handleProgress, $download_data, "start", "Startig download");
-        }
-      }
+    try{
+        do{
+          $chunk_data =  curl_exec($this->ch);
+          $header_info = curl_getinfo($this->ch);
+          if (curl_errno($this->ch)) {
+            $error_msg = curl_error($this->ch);
+            curl_close($this->ch);
+            throw new OperationsException($error_msg, OperationsExceptionCode::DOWNLOAD_PLUGIN_FAILURE);
+          }
+          $bytes_read = strlen($chunk_data);
+          $download_data->setNextRead($bytes_read, $chunk_data);
+          $bytes_start =  $download_data->bytes_start;
+          $bytes_to = $download_data->bytes_read_to;
+          $rangeOptions = [CURLOPT_RANGE => "{$bytes_start}-{$bytes_to}"];
+          curl_setopt_array($this->ch, $rangeOptions);
+          
+          if ($this->handleProgress) {
+              call_user_func($this->handleProgress, $download_data, "start", "Startig download");
+          }
+
+        } while($download_data->stop_download == false);
+    }catch(Exception $e){
+      $val = 100;
+    }
+    $stop = 10;
+
+    if ($this->reportStatusCallback) {
+      call_user_func($this->reportStatusCallback, true, "complete", "Bytes transfered {$download_data->bytes_transferred}");
+    }
+
   }
 
 
@@ -155,9 +175,8 @@ class CurlServiceConnector implements DownloadConnectorInterface{
         if (is_callable($handleProgress)) {
             $this->handleProgress = Closure::fromCallable($handleProgress);
         }
-
-      
         $headerInfo = $this->headerLookup($url);
+        $download_data->bytes_max = (int)$headerInfo->length;
 
         if($this->reportStatusCallback){
             call_user_func($this->reportStatusCallback, $headerInfo->multipart, "start", "Startig download");

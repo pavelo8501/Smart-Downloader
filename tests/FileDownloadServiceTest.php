@@ -32,13 +32,17 @@ class FileDownloadServiceTest extends TestCase {
 
     public function testHeaderReceived(): void{
 
-         $file_url = "https://storage.googleapis.com/public_test_access_ae/output_60sec.mp4";
+        $file_url = "https://storage.googleapis.com/public_test_access_ae/output_20sec.mp4";
 
         $this->transaction = new TransactionDataClass();
     
 
         // $downloader = new FileDownloadService(new CurlServiceConnector());
-        $this->downloader->start($file_url, 1024, $this->transaction);
+
+        $meg = 5;
+        $chunk_size = $meg * 1024 * 1024;
+
+        $this->downloader->start($file_url, $chunk_size, $this->transaction);
 
     }
 

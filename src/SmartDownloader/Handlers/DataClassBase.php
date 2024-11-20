@@ -2,6 +2,7 @@
 
 namespace SmartDownloader\Handlers;
 
+use ReflectionObject;
 use SmartDownloader\Exceptions\DataProcessingException;
 use SmartDownloader\Exceptions\DataProcessingExceptionCode;
 use SmartDownloader\Handlers\DataHandlerTrait;
@@ -29,6 +30,11 @@ abstract class DataClassBase{
 
 
     public function __get($name) {
+
+        if($this->{$name}){
+            return $this->{$name};
+        }
+
        $this->reflectProtectedProperties();
        if(key_exists($name, $this->keyProperties)){
            return $this->keyProperties[$name];
@@ -39,7 +45,17 @@ abstract class DataClassBase{
         $this->reflectProtectedProperties();
         if (key_exists($name, $this->keyProperties)) {
             $this->keyProperties[$name] = $value;
+            $reflector = new ReflectionObject($this);
+            if ($reflector->hasProperty($name)) {
+                $property = $reflector->getProperty($name);
+                if ($property->isProtected()) {
+                    $property->setAccessible(true);
+                    $property->setValue($this, $value);
+                    $this->{$name} = $value;
+                }
+            }
         }
+
     }
 
     public function copy(DataClassBase $copyTo, bool $strict = false): void{

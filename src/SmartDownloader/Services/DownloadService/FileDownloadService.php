@@ -17,6 +17,8 @@ class FileDownloadService {
 
     private TransactionDataClass $currentTransaction;
 
+    private array $downloads = [];
+
 
     public function __construct(DownloadConnectorInterface $connectorPlugin) {
         $this->connectorPlugin = $connectorPlugin;
@@ -32,13 +34,18 @@ class FileDownloadService {
         string  $status,
         string  $message
     ): void {
+
+        if($status == "complete"){
+            $val = 10;
+        }
+
        echo "{$multipart} | {$status} | {$message} ";
     }
 
     public function handleProgress(
         DownloadDataClass $download_data,
     ): void {
-       
+        $this->downloads[] = $download_data;
     }
 
     public function start(string $url, int $chunk_size, TransactionDataClass $transaction): DownloadRequest {
@@ -46,6 +53,9 @@ class FileDownloadService {
         $download_data = new DownloadDataClass();
         $transaction->copy($download_data);
         $download_data->chunk_size = $chunk_size;
+        $val1 =  $download_data->chunk_size;
+
+
         $this->connectorPlugin->downloadFile(
             $url,
             $download_data,
