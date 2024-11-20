@@ -31,6 +31,10 @@ class TransactionDataClass  extends DataClassBase
         }
     }
 
+    /**
+     * Load data from an array.
+     * @param callable $onUpdatedCallback
+     */
     public function setOnUpdatedCallback(callable $onUpdatedCallback){
         $this->onUpdatedCallback = Closure::fromCallable($onUpdatedCallback);
     }

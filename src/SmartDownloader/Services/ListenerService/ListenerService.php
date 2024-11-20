@@ -74,10 +74,7 @@ class ListenerService{
             );
             $downloadRequest->file_url = $request->file_url;
             $downloadRequest->file_path = $this->config->download_dir + "//filename.ext";
-            echo var_dump($downloadRequest);
             $newTransaction = $this->transactionContainer->registerNew($downloadRequest);
-            echo var_dump($newTransaction);
-            $a = 10;
             //$this->fileDownloader->startDownload($request->file_url, $this->config->chunk_size, $newTransaction);
             $this->notifyTaskInitiated(ListenerTasks::DOWNLOAD_STARTED, $newTransaction);
         }
