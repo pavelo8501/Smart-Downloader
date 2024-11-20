@@ -17,5 +17,10 @@
             "email": "pavelo8501@gmail.com"
         }
     ],
-    "require": {}
+    "require": {},
+     "scripts": {
+        "launch": [
+            "php index.php"
+        ]
+    }
 }

@@ -4,15 +4,18 @@ namespace SmartDownloader\Services\DownloadService\DownloadServicePlugins;
 
 use CurlHandle;
 use Exception;
+use SmartDownloader\Exceptions\OperationsException;
+use SmartDownloader\Exceptions\OperationsExceptionCode;
 use SmartDownloader\Services\DownloadService\DownloadConnectorInterface;
 use SmartDownloader\Handlers\DataClassBase;
 
 
 
- class RequestDataClass extends DataClassBase{
-    public bool $isMultipart;
-    public int $length;
-    public CurlHandle $ch;
+ class RequestDataClass{
+    public bool $isMultipart = false;
+    public int $length = 0;
+    public string $range = "";
+    public ?CurlHandle $ch = null;
  }
 
  
@@ -29,36 +32,33 @@ class CurlServiceConnector implements DownloadConnectorInterface{
 
     $requestResult = new RequestDataClass();
     $this->url = $url;
-
     $this->ch = curl_init($this->url);
     
-    if($this->ch){
+    if(!$this->ch){
+      throw new OperationsException("Using uninitialized download plugin", OperationsExceptionCode::COMPONENT_UNINITIALIZED);
+    }
 
-      $headers = array();
       curl_setopt($this->ch, CURLOPT_RETURNTRANSFER, true);
       curl_setopt($this->ch, CURLOPT_RANGE , true);
       curl_setopt($this->ch, CURLOPT_HEADER, true);
       curl_setopt($this->ch, CURLOPT_FILETIME, true);
       curl_setopt($this->ch, CURLOPT_NOBODY, true);
 
-      $headers =  curl_exec($this->ch);
+      $headersResponse =  curl_exec($this->ch);
       if(curl_errno($this->ch)) {
         throw new \Exception(curl_error($this->ch));
       }
 
-      // foreach($headers as $header){
+    $headerLines = explode("\r\n", $headersResponse);
 
-      //     $range = $header['Accept-Ranges']?? null;
-
-      // }
-
-          
-
-     // $requestResult->isMultipart = $range ? true : false;
-     // $requestResult->length =  $content_Lengt? $content_Lengt : 0; 
-     // $requestResult->ch = $this->ch;
-      
+    foreach ($headerLines as $headerLine) {
+        if (stripos($headerLine, 'Accept-Ranges:') !== false) {
+          $range = trim(substr($headerLine, strlen('Accept-Ranges:')));
+          $requestResult->isMultipart = true;
+          $requestResult->range = $range;
+        }
     }
+
     return $requestResult;
   }
 
@@ -105,7 +105,6 @@ class CurlServiceConnector implements DownloadConnectorInterface{
 
 
   public function downloadFile(string $url, int $chunk_size, callable $handleProgress): void{
-
 
     $this->isMultipart($url)->isMultipart ? 
       $this->downloadMultipart($this->ch, $chunk_size, $handleProgress) : 
