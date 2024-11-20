@@ -4,8 +4,16 @@ namespace SmartDownloader\Models;
 
 use SmartDownloader\Enumerators\RateExceedAction;
 use SmartDownloader\Exceptions\DataProcessingException;
-use SmartDownloader\Exceptions\DataExceptionEnum;
 use SmartDownloader\Exceptions\DataProcessingExceptionCode;
+
+enum ChinkSize: int{
+    case MB_1 =  1048576;
+    case MB_2  = 2097152;
+    case MB_5 =  5242880;
+    case MB_10 = 10485760;
+    case MB_15 = 15728640;
+}
+
 
 /**
  * Class SDConfiguration
@@ -37,7 +45,7 @@ class SDConfiguration{
     /**
      * @var int The size of each chunk to download in bytes.
      */
-    public static int $chunk_size = 1024;
+    public static ChinkSize $chunk_size = ChinkSize::MB_2;
 
     /**
      * @var RateExceedAction The action to take when the download rate limit is exceeded.

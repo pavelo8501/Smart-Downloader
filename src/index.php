@@ -29,11 +29,8 @@ $downloadManager = new SmartDownloader(function (SDConfiguration $config) {
 
 
 try {
-
     $post_request;
-
     if ($_SERVER["REQUEST_METHOD"] == "POST") {
-
         $post_input = file_get_contents('php://input');
         if(!$post_input){
             $response["err_code"] = 10;
@@ -49,7 +46,6 @@ try {
      $fakeRequest->action = "start";
      $fakeRequest->file_url = "https://storage.googleapis.com/public_test_access_ae/output_60sec.mp4";
 
-     
     $downloadManager->processRequest($fakeRequest);
 
 
