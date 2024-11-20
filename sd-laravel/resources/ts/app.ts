@@ -2,12 +2,15 @@
 import './bootstrap';
 import '../css/app.css';
 
+
+const file_url = import.meta.env.VITE_API_BASE_URL;
+
 import { createApp } from 'vue';
+import FilePanel from "./App/FilePanel.vue";
 
-import Panel from "./DownloadPanel/Panel.vue";
 
 
-const applicationFormApp = createApp(Panel);
+const applicationFormApp = createApp(FilePanel, { file_url });
 applicationFormApp.mount("#app");
 
 

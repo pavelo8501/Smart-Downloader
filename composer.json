@@ -11,13 +11,14 @@
             "SmartDownloader\\": "src/SmartDownloader/"
         }
     },
+    "version": "1.0.0",
+    
     "authors": [
         {
             "name": "pavelo8501",
             "email": "pavelo8501@gmail.com"
         }
     ],
-    "require": {},
      "scripts": {
         "launch": [
             "php index.php"
