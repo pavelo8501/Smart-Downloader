@@ -7,9 +7,11 @@ use CurlHandle;
 use Exception;
 use SmartDownloader\Exceptions\OperationsException;
 use SmartDownloader\Exceptions\OperationsExceptionCode;
-use SmartDownloader\Services\DownloadService\DownloadConnectorInterface;
 use SmartDownloader\Handlers\DataClassBase;
+use SmartDownloader\Services\DownloadService\DownloadServicePlugins\Interfaces\DownloadConnectorInterface;
 use SmartDownloader\Services\DownloadService\Models\DownloadDataClass;
+
+use function PHPUnit\Framework\throwException;
 
  class RequestDataClass{
     public bool $multipart = false;
@@ -28,7 +30,10 @@ class CurlServiceConnector implements DownloadConnectorInterface{
   private ?Closure $reportStatusCallback = null;
   private ?Closure $handleProgress = null;
 
-  public bool $download = true; 
+  public bool $download = true;
+  public string $interruption_message = "";
+
+  protected DownloadDataClass $download_data;
 
 
   public function __construct(){ }
@@ -110,7 +115,7 @@ class CurlServiceConnector implements DownloadConnectorInterface{
     echo "Download complete. Total bytes: $bytesTransferred";  
   }
 
-  private function downloadMultipart(string $url, DownloadDataClass $download_data, $handleProgress): void{
+  private function downloadMultipart(string $url, $handleProgress): void{
      
     $this->ch = curl_init();
     if(!$this->ch){
@@ -118,19 +123,27 @@ class CurlServiceConnector implements DownloadConnectorInterface{
     }
 
 
-    $download_data->initializeFirstRead();
+    $this->download_data->initializeFirstRead();
     $options = [
       CURLOPT_URL => $url,
       CURLOPT_CUSTOMREQUEST => "GET",
       CURLOPT_HTTPHEADER => array("Content-Type: */*"),
       CURLOPT_RETURNTRANSFER => true,
-      CURLOPT_RANGE => "{$download_data->bytes_start}-{$download_data->bytes_read_to}"
+      CURLOPT_RANGE => "{$this->download_data->bytes_start}-{$this->download_data->bytes_read_to}"
     ];
 
     curl_setopt_array($this->ch, $options);
 
     try{
         do{
+
+          if($this->download_data->stop_download == true || $this->download == false){
+            if($this->download == false){
+                $this->download_data->finalizeRead($this->interruption_message);
+            }
+            break;
+          }
+
           $chunk_data =  curl_exec($this->ch);
           $header_info = curl_getinfo($this->ch);
           if (curl_errno($this->ch)) {
@@ -139,30 +152,39 @@ class CurlServiceConnector implements DownloadConnectorInterface{
             throw new OperationsException($error_msg, OperationsExceptionCode::DOWNLOAD_PLUGIN_FAILURE);
           }
           $bytes_read = strlen($chunk_data);
-          $download_data->setNextRead($bytes_read, $chunk_data);
-          $bytes_start =  $download_data->bytes_start;
-          $bytes_to = $download_data->bytes_read_to;
+         $this->download_data->setNextRead($bytes_read, $chunk_data);
+          $bytes_start =  $this->download_data->bytes_start;
+          $bytes_to = $this->download_data->bytes_read_to;
           $rangeOptions = [CURLOPT_RANGE => "{$bytes_start}-{$bytes_to}"];
           curl_setopt_array($this->ch, $rangeOptions);
           
           if ($this->handleProgress) {
-              call_user_func($this->handleProgress, $download_data, "start", "Startig download");
+              call_user_func($this->handleProgress, $this->download_data, "start", "Startig download");
           }
 
-        } while($download_data->stop_download == false);
+        } while($this->download_data->stop_download == false);
     }catch(Exception $e){
-      $val = 100;
+      throwException($e);
     }
-    $stop = 10;
 
     if ($this->reportStatusCallback) {
-      call_user_func($this->reportStatusCallback, true, "complete", "Bytes transfered {$download_data->bytes_transferred}");
+      call_user_func($this->reportStatusCallback, true, "complete", "Bytes transfered {$this->download_data->bytes_transferred}");
     }
 
   }
 
 
   
+  /**
+   * Downloads a file from the given URL.
+   *
+   * @param string $url The URL of the file to download.
+   * @param DownloadDataClass $download_data An instance of DownloadDataClass containing download data.
+   * @param callable $reportStatusCallback A callback function to report the status of the download.
+   * @param callable $handleProgress A callback function to handle the progress of the download.
+   *
+   * @return void
+   */
   public function downloadFile(
     string $url, 
     DownloadDataClass $download_data, 
@@ -176,16 +198,23 @@ class CurlServiceConnector implements DownloadConnectorInterface{
             $this->handleProgress = Closure::fromCallable($handleProgress);
         }
         $headerInfo = $this->headerLookup($url);
-        $download_data->bytes_max = (int)$headerInfo->length;
+        $this->download_data = $download_data;
+        $this->download_data->bytes_max = (int)$headerInfo->length;
 
         if($this->reportStatusCallback){
             call_user_func($this->reportStatusCallback, $headerInfo->multipart, "start", "Startig download");
         }
         if($headerInfo->multipart){
-            $this->downloadMultipart($url, $download_data, $handleProgress);
+            $this->downloadMultipart($url, $this->download_data, $handleProgress);
         }else{
             $this->downloadSingle($url, $download_data->chunk_size, $handleProgress);
         }
+  }
+
+  public function stopDownload(string $message = ""): void {
+    $this->interruption_message = $message;
+    $this->download = false;
+    $this->download_data->finalizeRead($message);
 
   }
 

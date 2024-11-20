@@ -1,49 +1,96 @@
 <?php
 
 use PHPUnit\Framework\TestCase;
-
-use SmartDownloader\SmartDownloader;
-use SmartDownloader\Models\SDConfiguration;
-use SmartDownloader\Services\DownloadService\DownloadServicePlugins\CurlServiceConnector;
 use SmartDownloader\Services\DownloadService\FileDownloadService;
+use SmartDownloader\Services\DownloadService\DownloadServicePlugins\Interfaces\DownloadConnectorInterface;
+use SmartDownloader\Services\DownloadService\Models\DownloadDataClass;
 use SmartDownloader\Services\DownloadService\Models\TransactionDataClass;
-use SmartDownloader\Services\ListenerService\ListenerService;
 
-class FileDownloadServiceTest extends TestCase {
+class FileDownloadServiceTest extends TestCase
+{
+    private $connectorMock;
+    private $fileDownloadService;
 
-    private  FileDownloadService $downloader;
+    private $downloadData;
 
-    private ListenerService $listenerService;
-    private SmartDownloader $mockSmartDownloader;
-    private SDConfiguration $mockConfig;
-    private TransactionDataClass $transaction;
-
-    protected function setUp(): void {
-        $this->mockSmartDownloader = $this->createMock(SmartDownloader::class);
-        $this->mockConfig = $this->createMock(SDConfiguration::class);
-        $this->listenerService = new ListenerService($this->mockSmartDownloader, $this->mockConfig);
-
-
-        $this->downloader = new FileDownloadService(new CurlServiceConnector());
-
-        $this->transaction = new TransactionDataClass();
+    protected function setUp(): void{
+        $this->connectorMock = $this->createMock(DownloadConnectorInterface::class);
+        $this->fileDownloadService = new FileDownloadService($this->connectorMock);
+        $this->downloadData = new DownloadDataClass();
     }
 
+    public function testStart_ShouldTriggerDownload(): void{
+        $url = "http://example.com/file.txt";
+        $chunkSize = 1024;
+        $transactionMock = $this->createMock(TransactionDataClass::class);
+        $downloadData = new DownloadDataClass();
 
-    public function testHeaderReceived(): void{
+        $transactionMock->expects($this->once())
+            ->method('copy')
+            ->with($this->isInstanceOf(DownloadDataClass::class));
 
-        $file_url = "https://storage.googleapis.com/public_test_access_ae/output_20sec.mp4";
+        $this->connectorMock->expects($this->once())
+            ->method('downloadFile')
+            ->with(
+                $url,
+                $this->isInstanceOf(DownloadDataClass::class),
+                $this->callback(function ($callback) {
+                    return is_callable($callback);
+                }),
+                $this->callback(function ($callback) {
+                    return is_callable($callback);
+                })
+            );
 
-        $this->transaction = new TransactionDataClass();
-    
-
-        // $downloader = new FileDownloadService(new CurlServiceConnector());
-
-        $meg = 5;
-        $chunk_size = $meg * 1024 * 1024;
-
-        $this->downloader->start($file_url, $chunk_size, $this->transaction);
-
+        $this->fileDownloadService->start($url, $chunkSize, $transactionMock);
     }
 
+    public function testStop_ShouldCallConnectorStopDownload(): void{
+        $message = "Download stopped";
+
+        $this->connectorMock->expects($this->once())
+            ->method('stopDownload')
+            ->with($message);
+
+        $this->fileDownloadService->stop($message);
+    }
+
+    public function testStop_ShouldCallConnectorStopDownload_WithDefaultMessage(): void{
+        $this->connectorMock->expects($this->once())
+            ->method('stopDownload')
+            ->with("");
+
+        $this->fileDownloadService->stop();
+    }
+
+    public function testResume_NotImplementedYet(): void{
+        $this->expectNotToPerformAssertions();
+        $this->fileDownloadService->resume("http://example.com/file.txt", 1024, 100);
+    }
+
+    public function testStart_ShouldReportStatusAndHandleProgress(): void{
+         $url = "http://example.com/file.txt";
+        $chunkSize = 1024;
+        $transactionMock = $this->createMock(TransactionDataClass::class);
+
+        $transactionMock->expects($this->once())
+            ->method('copy')
+            ->with($this->isInstanceOf(DownloadDataClass::class));
+
+        $this->connectorMock->expects($this->once())
+            ->method('downloadFile')
+            ->willReturnCallback($url, $this->downloadData, function ($reportStatus, $handleProgress) {
+                $this->assertIsCallable($reportStatus);
+                $this->assertIsCallable($handleProgress);
+
+                
+                $reportStatus(true, "complete", "Download completed");
+                $handleProgress($this->downloadData);
+            });
+
+        $this->fileDownloadService->start($url, $chunkSize, $transactionMock);
+    }
 }
+
+
+
