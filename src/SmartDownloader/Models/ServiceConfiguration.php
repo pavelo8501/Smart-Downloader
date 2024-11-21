@@ -3,18 +3,8 @@
 namespace SmartDownloader\Models;
 
 use SmartDownloader\Services\LoggingService\Enums\LogLevel;
-use SmartDownloader\Services\LoggingService\LoggingService;
 
 class ServiceConfiguration {
-
-    public static SDConfiguration $config;
-
-    
-
-    public function __construct(){
-        
-    }
-
 
 
     /**
@@ -26,15 +16,5 @@ class ServiceConfiguration {
     public function subscribeLogging(LogLevel $minLogLevel, callable $callbackFunction){
 
     }
-
-
-    public function contextFunction(int $ten): void{
-        $a = $ten;
-    }
-
-
-    public int  $testA =0;
-
-
 
 }

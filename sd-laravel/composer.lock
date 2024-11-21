@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "d6b9f62f4b6e41ba5ce6b3c821465304",
+    "content-hash": "eca0005337ace494012d36d967d2a5f7",
     "packages": [
         {
             "name": "brick/math",
@@ -2401,46 +2401,6 @@
                 }
             ],
             "time": "2024-07-20T21:41:07+00:00"
-        },
-        {
-            "name": "po/smart-downloader",
-            "version": "1.0.0",
-            "dist": {
-                "type": "path",
-                "url": "..",
-                "reference": "7c30c2a9368c921a787e1bbe791f5fc2491357dc"
-            },
-            "require-dev": {
-                "phpunit/phpunit": "^11.4"
-            },
-            "type": "library",
-            "autoload": {
-                "psr-4": {
-                    "App\\": "src/",
-                    "SmartDownloader\\": "src/SmartDownloader/"
-                }
-            },
-            "scripts": {
-                "launch": [
-                    "php index.php"
-                ],
-                "docker_run": [
-                    "docker-compose up --build -d"
-                ],
-                "docker_stoop": [
-                    "docker-compose down"
-                ]
-            },
-            "authors": [
-                {
-                    "name": "pavelo8501",
-                    "email": "pavelo8501@gmail.com"
-                }
-            ],
-            "description": "PHP File downloader in context of test assignment",
-            "transport-options": {
-                "relative": true
-            }
         },
         {
             "name": "psr/clock",

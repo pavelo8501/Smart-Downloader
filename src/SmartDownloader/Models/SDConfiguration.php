@@ -51,8 +51,6 @@ class SDConfiguration{
      * @var RateExceedAction The action to take when the download rate limit is exceeded.
      */
     public static RateExceedAction $rate_exceed_action = RateExceedAction::CANCEL;
-
-
     /**
      * Retrieves the value of a specified property.
      * 
@@ -68,5 +66,11 @@ class SDConfiguration{
         }
         throw new DataProcessingException("No such key in the configuration", DataProcessingExceptionCode::PROPERTY_MISSING);
     }
-
+    static function getConfigurationArray():array{
+         return  [
+            "download_dir"=>self::$download_dir,
+            "temp_dir" => self::$temp_dir,
+            "max_downloads" => self::$max_downloads
+         ];
+    }
 }

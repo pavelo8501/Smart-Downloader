@@ -85,4 +85,12 @@ abstract class DataClassBase{
             $this->{$key} = $value;
         }
     }
+
+    public function toAssocArray():array{
+        $result = [];
+        foreach($this->reflectProtectedProperties as $key => $value){
+            $result[$key] = $value;
+        }
+        return $result;
+    }
 }

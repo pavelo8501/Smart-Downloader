@@ -21,8 +21,8 @@
         }
     ],
      "scripts": {
-        "launch": [
-            "php index.php"
+        "launch_src": [
+            "php src/index.php"
         ],
         "docker_run" : [
             "docker-compose up --build -d"
@@ -30,5 +30,9 @@
         "docker_stoop": [
             "docker-compose down"
         ]
+    },
+    "require": {
+        "ext-pdo_pgsql": "*",
+        "catfan/medoo": "^2.1"
     }
 }

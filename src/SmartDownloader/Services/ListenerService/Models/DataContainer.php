@@ -4,12 +4,17 @@
 namespace SmartDownloader\Services\ListenerService\Models;
 
 use Closure;
+use PHPUnit\Event\Runtime\OperatingSystem;
 use SmartDownloader\Exceptions\DataProcessingException;
 use SmartDownloader\Exceptions\DataProcessingExceptionCode;
+use SmartDownloader\Exceptions\OperationsException;
+use SmartDownloader\Exceptions\OperationsExceptionCode;
 use SmartDownloader\Models\DownloadRequest;
 use SmartDownloader\Services\DownloadService\Models\TransactionDataClass;
 use SmartDownloader\Services\ListenerService\Interfaces\TransactionDataContainer;
+use Symfony\Component\Clock\Clock;
 
+use function PHPUnit\Framework\callback;
 
 class DataContainer implements TransactionDataContainer{
 
@@ -20,13 +25,22 @@ class DataContainer implements TransactionDataContainer{
      */
     private array $records = [];
 
+    public ?Closure $RequestTransactionsHistory = null;
     private ?Closure $onRecordUpdated = null;
-
     private ?Closure $onDataRequested = null;
-  
+
+    /**
+     * @throws OperationsException
+     * @throws DataProcessingException
+     */
     public function __construct(
+        ?callable $RequestTransactionsHistory = null,
         ?callable $onDataRequested = null
     ){
+        if(is_callable($RequestTransactionsHistory)){
+            $this->RequestTransactionsHistory = Closure::fromCallable($RequestTransactionsHistory);
+        }
+
         if($onDataRequested != null){
             if(!is_callable($onDataRequested)){
                 throw new DataProcessingException(
@@ -37,6 +51,21 @@ class DataContainer implements TransactionDataContainer{
             $this->onDataRequested = Closure::fromCallable($onDataRequested);
             $this->requestData();
         }
+        if(count($this->records)  == 0){
+            if($this->RequestTransactionsHistory == null){
+                throw new OperationsException("RequestTransactionsHistory callback uninitialized in Data Container", OperationsExceptionCode::KEY_CALLBACK_UNINITIALIZED);
+            }
+            call_user_func($this->RequestTransactionsHistory,null);
+        }
+    }
+
+
+    /**
+     * Sets the function to retrieve the transactions history.
+     * @param callable(null): array[TransactionDataClass] $getTransactions A callable function that retrieves the transactions history.
+     */
+    public function setRequestTransactionsHistoryFunction(callable $getTransactions){
+
     }
 
 
@@ -61,13 +90,11 @@ class DataContainer implements TransactionDataContainer{
      * @return array[TransactionDataClass] The records in the container.
      */
     private function getRecordsByProperty(string $property, mixed $value):array{
-
         $filtered = array_filter($this->records, function ($record) use ($property, $value) {
             if ($record->getKeyProperties()[$property] == $value) {
                 return $record;
             }
         });
-
         return $filtered;
     }
 
@@ -105,8 +132,6 @@ class DataContainer implements TransactionDataContainer{
         $this->records[] = $newTransaction;
         return $newTransaction;
     }
-
-
 
     /**
      * Removes a transaction.

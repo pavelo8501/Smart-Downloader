@@ -12,11 +12,8 @@ use SmartDownloader\Services\ListenerService\Models\DataContainer;
 class FileDownloadService {
 
     private DownloadConnectorInterface $connectorPlugin;
-
     private DownloadRequest $request;
-
     private TransactionDataClass $currentTransaction;
-
     private array $downloads = [];
 
 

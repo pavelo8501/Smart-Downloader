@@ -3,6 +3,7 @@
 namespace SmartDownloader\Services\ListenerService;
 
 use Closure;
+use PhpParser\Node\Expr\Throw_;
 use SmartDownloader\Exceptions\OperationsException;
 use SmartDownloader\Exceptions\OperationsExceptionCode;
 use SmartDownloader\Models\ApiRequest;
@@ -29,23 +30,18 @@ class ListenerService{
 
     private DataContainer $transactionContainer;
     private ?FileDownloadService $fileDownloader = null;
-    private ?UpdateService $updatator = null;
-
-
+    
     public ?Closure $onTaskInitiated = null;
 
 
     public function __construct(
         SmartDownloader $parent,
-        SDConfiguration $config
+        DataContainer $transactionContainer
     ){
         $this->parent = $parent;
-        $this->config = $config;
+        $this->transactionContainer = $transactionContainer;
         if ($this->fileDownloader === null) {
             $this->fileDownloader = new FileDownloadService(new CurlServiceConnector());
-        }
-        if ($this->updatator === null) {
-            $this->updatator = new UpdateService(new PostgresConnector());
         }
 
         //$this->transactionContainer = new DataContainer($this->updatator->getTransactions());
@@ -58,13 +54,9 @@ class ListenerService{
         }
     }
 
-
     private function initializeDownload(ApiRequest $request){
         if($this->fileDownloader === null){
             $this->fileDownloader = new FileDownloadService(new CurlServiceConnector());
-        }
-        if (!$this->updatator === null) {
-            $this->updatator = new UpdateService(new PostgresConnector());
         }
 
         $count = $this->transactionContainer->getCountByPropType("status", TransactionStatus::IN_PROGRESS);
@@ -87,15 +79,27 @@ class ListenerService{
        // $this->notifyTaskInitiated(ListenerTasks::DOWNLOAD_STARTED, $transaction);
     }
 
-    private function resumeDownload(ApiRequest $request){
-        
-        if($this->updatator !== null){
-            $this->updatator = new UpdateService(new PostgresConnector());
-            $transaction = $this->updatator->getTransaction(0);
-            if ($this->fileDownloader !== null) {
-                 $this->fileDownloader->resume($transaction->file_url, $this->config->chunk_size, $transaction->bytes_saved);
-            }
+    private function notifyResumeDownload(ApiRequest $request){
+       
+    }
+    public ?Closure $onDownloadResume = \null;
+    protected function resumeDownload(ApiRequest $request){
+        $found_transaction =  $this->transactionContainer->getByPropertyValue("file_url", $request->file_url);
+        if ($found_transaction == \null) {
+            //TO DO REQUES FROM DB
         }
+        $this->notifyResumeDownload($found_transaction);
+        if($this->onDownloadResume == \null){
+            throw new OperationsException("onDownloadResume Callback not initialized in Listener", OperationsExceptionCode::KEY_CALLBACK_UNINITIALIZED);
+        }
+
+        // if($this->updatator !== null){
+        //     $this->updatator = new UpdateService(new PostgresConnector());
+        //     $transaction = $this->updatator->getTransaction(0);
+        //     if ($this->fileDownloader !== null) {
+        //          $this->fileDownloader->resume($transaction->file_url, $this->config->chunk_size, $transaction->bytes_saved);
+        //     }
+        // }
     }
 
     private function cancelDownload(ApiRequest $request) {
@@ -104,11 +108,9 @@ class ListenerService{
         }
     }
 
-
     public function subscribeTasksInitaiated(callable $callback){
         $this->onTaskInitiated = Closure::fromCallable($callback);
     }
-
 
     /**
      * Undocumented function
@@ -116,10 +118,13 @@ class ListenerService{
      * @param ApiRequest $request
      * @return void
      */
-    public function processRequest(ApiRequest $request):void{
+    public function processRequest(ApiRequest $request, ?array $config = \null):void{
         $this->currentRequest = $request;
         switch ($request->action){
             case "start":
+                if($config == \null){
+                    $this->parent::$logger::warn("Config not received on start download");
+                }
                 $this->initializeDownload($request);
                 break;
             case "pause":
