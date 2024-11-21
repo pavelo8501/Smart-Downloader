@@ -44,7 +44,8 @@ class LoggingService{
      */
     private static $logSubscriptions = [];
 
-    public static function log(LogLevel $level, string|Throwable $message){
+
+    protected static function log(LogLevel $level, string|Throwable $message){
         try{
             foreach (self::$logSubscriptions as  $logSubscription){
                 if($logSubscription->min_level->value >= $level->value){
@@ -68,22 +69,32 @@ class LoggingService{
         }
     }
 
-    public function subscribe(LogLevel $minimalLevel, callable $callbackFunction){
+
+    /**
+     * Subscribes a callback function to log events with a specified minimal log level.
+     * @param LogLevel $minimalLevel The minimal log level for which the callback should be triggered.
+     * @param callable(string, string)$callbackFunction The callback function to be executed when a log event occurs.
+     */
+    public static function subscribe(LogLevel $minimalLevel, callable $callbackFunction){
         if(!!!is_callable($callbackFunction)){
            $newSubscripvion = new LogSubscription($minimalLevel, $callbackFunction);
            self::$logSubscriptions[] = $newSubscripvion;
         }
     }
 
+    
     public static function info(string $message) {
         self::log(LogLevel::MESSAGE, $message);
     }
+
     public static function event(string $message){
         self::log(LogLevel::EVENT, $message);
     }
+
     public static function warn(string $message){
         self::log(LogLevel::WARNING, $message);
     }
+
     public static function error(Throwable $e){
         self::log(LogLevel::HANDLED_EXCEPTION, $e);
     }

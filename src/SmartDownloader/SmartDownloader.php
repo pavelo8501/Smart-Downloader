@@ -2,9 +2,7 @@
 
 namespace SmartDownloader;
 
-use Closure;
 use SmartDownloader\Models\ApiRequest;
-use SmartDownloader\Models\DownloadRequest;
 use SmartDownloader\Models\SDConfiguration;
 use SmartDownloader\Models\ServiceConfiguration;
 use SmartDownloader\Services\ListenerService\ListenerService;
@@ -21,7 +19,7 @@ class SmartDownloader {
     private function registerService($listenerService, $requestorUrl):void {
         self::$listenerServices [$requestorUrl] = $listenerService;
     }
-    
+
     public function processRequest(ApiRequest $request):void{
         if(!$this->listenerService){
             $this->listenerService = new ListenerService($this, self::$config);
@@ -36,7 +34,6 @@ class SmartDownloader {
         };
         $callback->call($this->config);
     }
-
 
     // public function configure(callable $callback): ServiceConfiguration {
     //     $callback = function () use ($callback) {
