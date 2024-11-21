@@ -9,6 +9,7 @@ use SmartDownloader\Enumerators\RateExceedAction;
 use SmartDownloader\Models\SDConfiguration;
 use SmartDownloader\SmartDownloader;
 use SmartDownloader\Models\ApiRequest;
+use SmartDownloader\Services\LoggingService\Enums\LogLevel;
 
 error_reporting(E_ALL);
 ini_set('display_errors', 'On');
@@ -20,12 +21,16 @@ if(file_exists($autoload_path)){
 }
 
 
-$downloadManager = new SmartDownloader(function (SDConfiguration $config) {
-    $config->temp_dir = "temp";
-    $config->download_dir = "downloads";
-    $config->rate_exceed_action= RateExceedAction::QUE;
-    $config->max_downloads = 5;
-});
+
+ $downloadManager = new SmartDownloader();
+
+
+//     $config->temp_dir = "temp";
+//     $config->download_dir = "downloads";
+//     $config->rate_exceed_action= RateExceedAction::QUE;
+//     $config->max_downloads = 5;
+//     $val = 10;
+// });
 
 
 try {

@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<psalm
+    name="SmartDownloader"
+    errorLevel="1"
+    resolveFromConfigFile="true"
+    findUnusedCode="true"
+    findUnusedVariablesAndParams="true"
+>
+    <projectFiles>
+        <directory name="src" />
+    </projectFiles>
+    <issueHandlers>
+        <LessSpecificImplementedReturnType errorLevel="suppress" />
+        <MixedAssignment errorLevel="suppress" />
+    </issueHandlers>
+</psalm>
