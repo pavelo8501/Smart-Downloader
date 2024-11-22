@@ -25,32 +25,32 @@ class SDConfiguration{
     /**
      * @var string The directory where downloaded files will be saved.
      */
-    public static string $download_dir = 'downloads';
+    public string $download_dir = 'downloads';
 
     /**
      * @var string The directory used for temporary files during downloads.
      */
-    public static string $temp_dir = 'temp';
+    public string $temp_dir = 'temp';
 
     /**
      * @var int The maximum number of concurrent downloads allowed.
      */
-    public static int $max_downloads = 5;
+    public int $max_downloads = 5;
 
     /**
      * @var int The number of retry attempts if a download fails or process interupted
      */
-    public static int $retry_attempts = 5;
+    public int $retry_attempts = 5;
 
     /**
      * @var int The size of each chunk to download in bytes.
      */
-    public static ChinkSize $chunk_size = ChinkSize::MB_2;
+    public ChinkSize $chunk_size = ChinkSize::MB_2;
 
     /**
      * @var RateExceedAction The action to take when the download rate limit is exceeded.
      */
-    public static RateExceedAction $rate_exceed_action = RateExceedAction::CANCEL;
+    public RateExceedAction $rate_exceed_action = RateExceedAction::CANCEL;
     /**
      * Retrieves the value of a specified property.
      * 
@@ -66,11 +66,11 @@ class SDConfiguration{
         }
         throw new DataProcessingException("No such key in the configuration", DataProcessingExceptionCode::PROPERTY_MISSING);
     }
-    static function getConfigurationArray():array{
+    function getConfigurationArray():array{
          return  [
-            "download_dir"=>self::$download_dir,
-            "temp_dir" => self::$temp_dir,
-            "max_downloads" => self::$max_downloads
+            "download_dir"=> $this->download_dir,
+            "temp_dir" => $this->temp_dir,
+            "max_downloads" => $this->max_downloads
          ];
     }
 }

@@ -20,7 +20,7 @@ use SmartDownloader\Services\UpdateService\UpdateServicePlugins\SqlCommonConnect
 class SmartDownloader {
 
     public static LoggingService $logger;
-    private static SDConfiguration $config;
+    public static SDConfiguration $config;
 
     private static ListenerService $listenerServices;
     private ?DataContainer $dataContainer = null;
@@ -44,6 +44,7 @@ class SmartDownloader {
         self::$config = new SDConfiguration();
         $this->initUpdater();
         $this->initDataContainer();
+        $this->initListener();
     }
 
     public function initUpdater(SqlCommonConnector $connector = null): UpdateService {
@@ -57,15 +58,21 @@ class SmartDownloader {
         return $this->updateService;
     }
 
+    protected function initListener(): void {
+        self::$listenerService = new ListenerService($this, $this->dataContainer);
+    }
+
     /**
      * @throws OperationsException
      * @throws DataProcessingException
      */
     protected function initDataContainer(): void{
-         $this->dataContainer = new  DataContainer(
-             [$this->updateService, "onGetTransactions"],
-             null);
+         $this->dataContainer = new  DataContainer([$this->updateService, "onGetTransactions"], null);
+         $this->dataContainer->subscribeToTransactionUpdates([$this->updateService, "onUpdateTransaction"], "updateService");
+         $this->dataContainer->subscribeToTransactionUpdates([$this->updateService, "onUpdateTransaction"], "updateService");
     }
+
+
 
     public function getRequest(ApiRequest $request):void{
         // if(!$this->listenerService){

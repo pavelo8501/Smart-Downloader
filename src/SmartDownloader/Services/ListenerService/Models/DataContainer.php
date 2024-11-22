@@ -26,7 +26,7 @@ class DataContainer implements TransactionDataContainer{
     private array $records = [];
 
     public ?Closure $RequestTransactionsHistory = null;
-    private ?Closure $onRecordUpdated = null;
+    private array $onRecordUpdatedCallbacks = [];
     private ?Closure $onDataRequested = null;
 
     /**
@@ -64,8 +64,12 @@ class DataContainer implements TransactionDataContainer{
      * Sets the function to retrieve the transactions history.
      * @param callable(null): array[TransactionDataClass] $getTransactions A callable function that retrieves the transactions history.
      */
-    public function setRequestTransactionsHistoryFunction(callable $getTransactions){
-
+    public function subscribeToTransactionUpdates(callable $transactionUpdatedCallback, string $subscriber): void{
+        if(is_callable($transactionUpdatedCallback)){
+            $this->onRecordUpdatedCallbacks[$subscriber] = $transactionUpdatedCallback;
+        }else{
+            throw new DataProcessingException("Subscription failed. Callback provided is invalid", DataProcessingExceptionCode::INVALID_DATA_SUPPLIED);
+        }
     }
 
 
@@ -105,8 +109,8 @@ class DataContainer implements TransactionDataContainer{
      * @param TransactionDataClass $transaction The transaction that was updated.
      */
     function onTransactionUpdated(TransactionDataClass $transaction):void{
-        if($this->onRecordUpdated != null ){
-            call_user_func($this->onRecordUpdated, $transaction);
+        foreach ($this->onRecordUpdatedCallbacks as $callback){
+            call_user_func($callback, $transaction);
         }
     }
 
@@ -127,8 +131,9 @@ class DataContainer implements TransactionDataContainer{
      */
     function registerNew(DownloadRequest $download):TransactionDataClass{
         
-        $newTransaction = new TransactionDataClass([$this, 'onTransactionUpdated']);
-        $download->copy($newTransaction);
+        $newTransaction = new TransactionDataClass();
+        $download->copyData($newTransaction);
+        $newTransaction->setOnUpdatedCallback([$this, 'onTransactionUpdated']);
         $this->records[] = $newTransaction;
         return $newTransaction;
     }

@@ -33,6 +33,7 @@
     },
     "require": {
         "ext-pdo_pgsql": "*",
-      "ext-pdo": "*"
+      "ext-pdo": "*",
+        "ext-curl": "*"
     }
 }

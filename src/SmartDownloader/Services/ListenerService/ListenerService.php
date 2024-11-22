@@ -24,7 +24,7 @@ class ListenerService{
     public string  $file_download_path;
 
     private SmartDownloader $parent;
-    private SDConfiguration $config;
+    private ?SDConfiguration $config;
 
     private ApiRequest $currentRequest;
 
@@ -54,18 +54,19 @@ class ListenerService{
         }
     }
 
-    private function initializeDownload(ApiRequest $request){
+    private function initializeDownload(ApiRequest $request):void{
         if($this->fileDownloader === null){
             $this->fileDownloader = new FileDownloadService(new CurlServiceConnector());
         }
 
         $count = $this->transactionContainer->getCountByPropType("status", TransactionStatus::IN_PROGRESS);
-        if ($count <= $this->config->max_downloads) {
+        $config =   SmartDownloader::$config;
+        if ($count <=   $config->max_downloads) {
             $downloadRequest = new DownloadRequest();
             $downloadRequest->file_url = $request->file_url;
-            $downloadRequest->file_path = $this->config->download_dir + "//filename.ext";
+            $downloadRequest->file_path =  "{$config->download_dir}/filename.ext";
             $newTransaction = $this->transactionContainer->registerNew($downloadRequest);
-            $this->fileDownloader->start($request->file_url, $this->config->chunk_size, $newTransaction);
+            $this->fileDownloader->start($newTransaction);
             $this->notifyTaskInitiated(ListenerTasks::DOWNLOAD_STARTED, $newTransaction);
         }
     }

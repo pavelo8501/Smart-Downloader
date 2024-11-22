@@ -45,7 +45,7 @@ class LoggingService{
     private static $logSubscriptions = [];
 
 
-    protected static function log(LogLevel $level, string|Throwable $message){
+    protected static function log(LogLevel $level, string|Throwable $message, Throwable $exception = null){
         try{
             foreach (self::$logSubscriptions as  $logSubscription){
                 if($logSubscription->min_level->value >= $level->value){
@@ -95,8 +95,8 @@ class LoggingService{
         self::log(LogLevel::WARNING, $message);
     }
 
-    public static function error(Throwable $e){
-        self::log(LogLevel::HANDLED_EXCEPTION, $e);
+    public static function error(string $message, ?Throwable $e = null):void{
+        self::log(LogLevel::HANDLED_EXCEPTION, $message, $e);
     }
 
 }

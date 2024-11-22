@@ -3,6 +3,7 @@
 namespace SmartDownloader\Services\DownloadService;
 
 use SmartDownloader\Models\DownloadRequest;
+use SmartDownloader\Services\DownloadService\Enums\TransactionStatus;
 use SmartDownloader\SmartDownloader;
 use SmartDownloader\Services\DownloadService\DownloadServicePlugins\Interfaces\DownloadConnectorInterface;
 use SmartDownloader\Services\DownloadService\Models\DownloadDataClass;
@@ -24,14 +25,15 @@ class FileDownloadService {
 
     public function handleProgress(DownloadDataClass $downloadData ): void {
 
-       
     }
 
     
     
-    public function reportStatus(bool  $multipart, string  $status, string  $message): void {
-        if($status == "complete"){
-        
+    public function reportStatus(bool  $can_resume, TransactionStatus  $status, string  $message): void {
+        if($status == TransactionStatus::IN_PROGRESS){
+            $this->currentTransaction->status = $status;
+            $this->currentTransaction->can_resume = $can_resume;
+            $this->currentTransaction->notifyUpdated($this->currentTransaction);
         }
     }
     
@@ -42,15 +44,13 @@ class FileDownloadService {
      *
      * @return void
      */
-    public function start(string $url, int $chunk_size, TransactionDataClass $transaction): void {
+    public function start(TransactionDataClass $transaction): void {
         $this->currentTransaction = $transaction;
         $download_data = new DownloadDataClass();
-        $transaction->copy($download_data);
-        $download_data->chunk_size = $chunk_size;
-        $val1 =  $download_data->chunk_size;
-
+        $transaction->copyData($download_data);
+        $transaction->setDownloadDataClass($download_data);
         $this->connectorPlugin->downloadFile(
-            $url,
+            $transaction->file_url,
             $download_data,
             [$this, 'reportStatus'],
             [$this, 'handleProgress']
