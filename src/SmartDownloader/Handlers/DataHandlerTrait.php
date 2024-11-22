@@ -26,6 +26,7 @@ trait DataHandlerTrait
         $thisProperties  = get_object_vars($this);
         $otherProperties = get_object_vars($other);
         $differencies  = array_diff($thisProperties, $otherProperties);
+
         return count($differencies) === 0;
     }
 }

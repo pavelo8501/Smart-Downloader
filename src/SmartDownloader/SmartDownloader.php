@@ -3,8 +3,10 @@
 namespace SmartDownloader;
 
 use Closure;
+use PDO;
 use SmartDownloader\Exceptions\DataProcessingException;
 use SmartDownloader\Exceptions\OperationsException;
+use SmartDownloader\Exceptions\OperationsExceptionCode;
 use SmartDownloader\Models\ApiRequest;
 use SmartDownloader\Models\SDConfiguration;
 use SmartDownloader\Models\ServiceConfiguration;
@@ -13,6 +15,7 @@ use SmartDownloader\Services\LoggingService\LoggingService;
 use SmartDownloader\Services\UpdateService\UpdateService;
 use SmartDownloader\Services\UpdateService\UpdateServicePlugins\PostgresConnector;
 use SmartDownloader\Services\ListenerService\Models\DataContainer;
+use SmartDownloader\Services\UpdateService\UpdateServicePlugins\SqlCommonConnector;
 
 class SmartDownloader {
 
@@ -24,23 +27,32 @@ class SmartDownloader {
     protected ?UpdateService $updateService = null;
     private static ListenerService $listenerService ;
 
+    protected SqlCommonConnector $connector;
+
     /**
      * @throws OperationsException
      * @throws DataProcessingException
      */
-    public function __construct()
-    {
+    public function __construct(?SqlCommonConnector $db_connector){
+        if($db_connector == null){
+            throw new OperationsException(
+                "DataConnector not provided unable to process data",
+                OperationsExceptionCode::SETUP_FAILURE
+            );
+        }
+        $this->connector = $db_connector;
         self::$config = new SDConfiguration();
         $this->initUpdater();
         $this->initDataContainer();
     }
 
-    public function initUpdater($connector = null): UpdateService {
+    public function initUpdater(SqlCommonConnector $connector = null): UpdateService {
         if($this->updateService === null) {
-            $this->updateService = new UpdateService(new PostgresConnector());
-        }
-        if($connector){
-            $this->updateService->updaterPlugin = $connector;
+            if($connector){
+                $this->updateService = new UpdateService($connector);
+            }else{
+                $this->updateService = new UpdateService($this->connector);
+            }
         }
         return $this->updateService;
     }
@@ -59,7 +71,6 @@ class SmartDownloader {
         // if(!$this->listenerService){
         //     $this->listenerService = new ListenerService($this, $container);
         // }
-
         if($request->action == "start"){
             $configArray =  self::$config->getConfigurationArray();
         }

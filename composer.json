@@ -33,6 +33,6 @@
     },
     "require": {
         "ext-pdo_pgsql": "*",
-        "catfan/medoo": "^2.1"
+      "ext-pdo": "*"
     }
 }

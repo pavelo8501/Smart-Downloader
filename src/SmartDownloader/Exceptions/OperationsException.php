@@ -12,6 +12,10 @@ enum OperationsExceptionCode: int {
     case DOWNLOAD_INITIALIZATION_FAIL = 4;
     case DOWNLOAD_PLUGIN_FAILURE = 5;
     case KEY_CALLBACK_UNINITIALIZED = 6;
+    case TRANSACTIONS_NOT_LOADED = 7;
+    case SETUP_FAILURE = 8;
+    case DATASOURCE_CONNECTION_FAILURE = 9;
+    case DATASOURCE_INSERT_FAIL = 10;
 }
 
 

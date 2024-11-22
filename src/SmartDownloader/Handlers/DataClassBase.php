@@ -3,94 +3,93 @@
 namespace SmartDownloader\Handlers;
 
 use ReflectionObject;
+use ReflectionProperty;
 use SmartDownloader\Exceptions\DataProcessingException;
 use SmartDownloader\Exceptions\DataProcessingExceptionCode;
 use SmartDownloader\Handlers\DataHandlerTrait;
+use SmartDownloader\Services\LoggingService\LoggingService;
+
+abstract class DataClassBase {
 
 
-abstract class DataClassBase{
 
-    use DataHandlerTrait;
+    protected \Closure $onUpdatedCallback;
 
-    public array $keyProperties = [];
+    public static $keyProperties;
 
-    public function reflectProtectedProperties(): void {
-        if (count($this->keyProperties) == 0) {
-            $child_class = new \ReflectionClass($this);
-            $allProperties = $child_class->getProperties();
-            $protectedProperties = array_filter(
-                $allProperties,
-                fn($property) => $property->isProtected()
-            );
-            foreach($protectedProperties as $property){
-                $this->keyProperties[$property->getName()] = $property->getValue($this);
-            }
-        }
-    }
+    protected array $fakeProperties;
 
 
-    public function __get($name) {
+    public static function toAssocArray(DataClassBase  $object){
 
-        if($this->{$name}){
-            return $this->{$name};
-        }
 
-       $this->reflectProtectedProperties();
-       if(key_exists($name, $this->keyProperties)){
-           return $this->keyProperties[$name];
+       $result[] = [];
+       foreach (DataClassBase::class->fakeProperties  as $property){
+           $result[$property] = $object->{$property};
        }
+       return $result;
     }
 
-    public function __set($name, $value) {
-        $this->reflectProtectedProperties();
-        if (key_exists($name, $this->keyProperties)) {
-            $this->keyProperties[$name] = $value;
-            $reflector = new ReflectionObject($this);
-            if ($reflector->hasProperty($name)) {
-                $property = $reflector->getProperty($name);
-                if ($property->isProtected()) {
-                    $property->setAccessible(true);
-                    $property->setValue($this, $value);
-                    $this->{$name} = $value;
-                }
+
+    public function __construct(?array $propertiesToExpose = null){
+        foreach ($this->exposedProperties as $key => $value){
+            self::$keyProperties[][$key] = ["Type" => $value::class, "value" => $value];
+            $a =10;
+        }
+    }
+    private array $exposedProperties = [];
+
+    public function execute(array $propertiesToExpose)
+    {
+
+        $redundantProperties[]  = array_filter($this->exposedProperties, function ($key) use ($propertiesToExpose) {});
+
+        $newFilteredProperties[] =  array_filter($propertiesToExpose, function ($key)  use ($redundantProperties) {
+             !$this->exposedProperties[$key]->value();
+        });
+
+        if (empty($newFilteredProperties) && empty($redundantProperties)) {
+            return $this;
+        }
+        $object = new ReflectionObject($this);
+        $childClass = new \ReflectionClass($this);
+
+        foreach ($redundantProperties as $redundantProperty) {
+            LoggingService::warn("Found redundant property {$redundantProperty} in Data Class");
+        }
+
+        foreach ($newProperties as $propertyName) {
+
+            try {
+
+                if(!$propertyName->isPrivate())continue;
+                $propertyName->setAccessible(true);
+                $property = $childClass->getProperty($propertyName);
+                $property->setValue($object, $propertyName);
+                $this->exposedProperties[][$propertyName] = $property;
+
+                $a = 10;
+
+//                if (!$property->isPublic()) {
+//                    continue;
+//                }
+
+//                $getter = function () use ($property) {
+//                    return $property->getValue($this);
+//                };
+//
+//                $setter = function ($value) use ($property) {
+//                    $property->setValue($this, $value);
+//                };
+//                $this->exposedProperties[$propertyName] = [
+//                    'get' => $getter,
+//                    'set' => $setter,
+//                ];
+
+            } catch (\ReflectionException $e) {
+                throw new DataProcessingException("Property '{$propertyName}' not found in {$childClass->getName()}",
+                    DataProcessingExceptionCode::PARENT_INIT_FAILED);
             }
         }
-
-    }
-
-    public function copy(DataClassBase $copyTo, bool $strict = false): void{
-       
-        foreach(array_keys($copyTo->keyProperties) as $key){
-            if(!key_exists($key, $this->keyProperties)){
-                if($strict){
-                    throw new DataProcessingException("Property $key not found in source object", DataProcessingExceptionCode::PROPERTY_MISSING);
-                }
-                continue;
-            }else{
-                $copyTo->{$key} = $this->{$key};
-                $copyTo->keyProperties[$key]  = $this->{$key};
-            }
-        }
-    }
-
-    public function loadFromArray(array $data, bool $strict = false): void{
-        foreach($data as $key => $value){
-            if(!property_exists($this, $key)){
-                if($strict){
-                    throw new DataProcessingException("Property $key not found in source object", DataProcessingExceptionCode::PROPERTY_MISSING);
-                }else{
-                    continue;
-                }
-            }
-            $this->{$key} = $value;
-        }
-    }
-
-    public function toAssocArray():array{
-        $result = [];
-        foreach($this->reflectProtectedProperties as $key => $value){
-            $result[$key] = $value;
-        }
-        return $result;
     }
 }

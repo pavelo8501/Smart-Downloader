@@ -1,7 +1,6 @@
 <?php
 namespace SmartDownloader\Services\UpdateService;
 
-use Medoo\Medoo;
 use SmartDownloader\Exceptions\DataProcessingException;
 use SmartDownloader\Exceptions\OperationsException;
 use SmartDownloader\Exceptions\OperationsExceptionCode;
@@ -17,42 +16,27 @@ class UpdateService{
     public function __construct(UpdateConnectorInterface $plugin){
         $this->updaterPlugin = $plugin;
     }
-    public function saveTransactions(array $transactions): void{
-        $transactions = array_map(fn($transaction) => $transaction->toAssocArray(), $transactions);
-        $this->updaterPlugin->createTable("transactions", $transactions);
+    public function saveTransaction(TransactionDataClass $transaction): void{
+        $this->saveTransaction($transaction);
     }
 
-    /**
-     * @throws OperationsException
-     * @throws DataProcessingException
-     */
-    public function getTransaction(int $id): TransactionDataClass{
+    public function getTransaction(int $id): TransactionDataClass | null{
         
-        
-        $data = $this->updaterPlugin->pickData($id);
-        if(!$data){
-            throw new OperationsException("Transaction not found", OperationsExceptionCode::TRANSACTION_NOT_FOUND);
-        }
-        $transaction =  new TransactionDataClass();
-        $transaction->loadFromArray($data);
-        return $transaction;
+
+        return null;
+    }
+
+    public function updateTransaction(TransactionDataClass $transaction): void{
+
     }
 
     public function getTransactions(): array | null {
-
-        $select =  $this->updaterPlugin->getTransactions();
-         $transactions = [];
-             foreach($select as $key=>$value){
-                 $tr = new TransactionDataClass();
-                 $tr[$key]->value = $value;
-                 $transactions[] = $tr;
-             }
-         return $transactions;
+        $transactions =  $this->updaterPlugin->getTransactions(true);
+        return $transactions;
     }
 
     public  function  onGetTransactions(): array | null {
         return $this->getTransactions();
-
     }
 
 }

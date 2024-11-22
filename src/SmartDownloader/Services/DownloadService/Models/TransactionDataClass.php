@@ -14,38 +14,34 @@ use SmartDownloader\Services\DownloadService\Enums\TransactionStatus;
  */
 class TransactionDataClass  extends DataClassBase
 {
-    protected  int $id = 0;
-    protected  string $file_url = "";
-    protected  string $file_path = "";
-    protected  int $chunk_size = 1024;
-    protected  int $bytes_saved = 0;
+    public  int $id = 0;
+
+    public  string $file_url = "";
+    public  string $file_path = "";
+    public  int $chunk_size = 1024;
+    public  int $bytes_saved = 0;
     
-    protected  TransactionStatus $status = TransactionStatus::UNINITIALIZED;
+    public  TransactionStatus $status = TransactionStatus::UNINITIALIZED;
 
-    private ?\Closure $onUpdatedCallback = null;
+    //["id", "file_url", "chunk_size", "file_path",  "bytes_saved"]
+//$this->execute(["id", "file_url", "chunk_size", "file_path",  "bytes_saved"]);
 
-    public function __construct(
-        ?callable $onUpdatedCallback = null) {
+    private  array $properties = ["id","file_url","chunk_size","file_path", "bytes_saved"];
 
-        if($onUpdatedCallback){
-            $this->onUpdatedCallback = Closure::fromCallable($onUpdatedCallback);
-        }
-    }
+    public function __construct(){
 
-    /**
-     * Load data from an array.
-     * @param callable $onUpdatedCallback
-     */
-    public function setOnUpdatedCallback(callable $onUpdatedCallback){
-        $this->onUpdatedCallback = Closure::fromCallable($onUpdatedCallback);
+        parent::__construct();
     }
 
     /**
      * Notify that the transaction was updated.
      */
     public function notifyUpdated(){
+
         if($this->onUpdatedCallback){
             call_user_func($this->onUpdatedCallback, $this);
         }
     }
+
+
 }
