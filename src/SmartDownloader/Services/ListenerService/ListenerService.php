@@ -3,6 +3,7 @@
 namespace SmartDownloader\Services\ListenerService;
 
 use Closure;
+use Exception;
 use PhpParser\Node\Expr\Throw_;
 use SmartDownloader\Exceptions\OperationsException;
 use SmartDownloader\Exceptions\OperationsExceptionCode;
@@ -30,10 +31,9 @@ class ListenerService{
     private ApiRequest $currentRequest;
 
     private DataContainer $transactionContainer;
-    private ?FileDownloadService $fileDownloader = null;
+  //  private ?FileDownloadService $fileDownloader = null;
     
     public ?Closure $onTaskInitiated = null;
-
 
     public function __construct(
         SmartDownloader $parent,
@@ -41,9 +41,9 @@ class ListenerService{
     ){
         $this->parent = $parent;
         $this->transactionContainer = $transactionContainer;
-        if ($this->fileDownloader === null) {
-            $this->fileDownloader = new FileDownloadService(new CurlServiceConnector());
-        }
+//        if ($this->fileDownloader === null) {
+//            $this->fileDownloader = new FileDownloadService(new CurlServiceConnector());
+//        }
 
         //$this->transactionContainer = new DataContainer($this->updatator->getTransactions());
     }
@@ -56,10 +56,6 @@ class ListenerService{
     }
 
     private function initializeDownload(ApiRequest $request):void{
-        if($this->fileDownloader === null){
-            $this->fileDownloader = new FileDownloadService(new CurlServiceConnector());
-        }
-
         $count = $this->transactionContainer->getCountByPropType("status", TransactionStatus::IN_PROGRESS);
         $config =   SmartDownloader::$config;
         if ($count <=   $config->max_downloads) {
@@ -67,7 +63,6 @@ class ListenerService{
             $downloadRequest->file_url = $request->file_url;
             $downloadRequest->file_path =  "{$config->download_dir}/filename.ext";
             $newTransaction = $this->transactionContainer->registerNew($downloadRequest);
-           // $this->fileDownloader->start($newTransaction);
             $this->notifyTaskInitiated(ListenerTasks::DOWNLOAD_STARTED, $newTransaction);
         }
     }
@@ -104,14 +99,22 @@ class ListenerService{
         // }
     }
 
-    private function cancelDownload(ApiRequest $request) {
-        if ($this->fileDownloader !== null) {
-            $this->fileDownloader->stop();
+
+    private function stopDownload(ApiRequest $request):void {
+        try {
+            $value =  $this->parent::getFiberByProcessId(0)?->resume($request) ?? null;
+            $a =  $value;
+        }catch (Exception $exception){
+            LoggingService::error($exception->getMessage());
         }
     }
 
     public function subscribeTasksInitaiated(callable $callback){
-        $this->onTaskInitiated = Closure::fromCallable($callback);
+        try {
+            $this->onTaskInitiated = Closure::fromCallable($callback);
+        }catch (Exception $exception){
+            LoggingService::error($exception->getMessage());
+        }
     }
 
     /**
@@ -131,7 +134,7 @@ class ListenerService{
                 $this->initializeDownload($request);
                 break;
             case "stop":
-                $this->pauseDownload($request);
+                $this->stopDownload($request);
                 LoggingService::info("Stopping download :  {$request->file_url}");
                 break;
             case "resume":

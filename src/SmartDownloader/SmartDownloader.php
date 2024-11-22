@@ -35,6 +35,8 @@ class SmartDownloader {
 
     protected SqlCommonConnector $connector;
 
+    protected  array $fibers = [];
+
     /**
      * @throws OperationsException
      * @throws DataProcessingException
@@ -54,6 +56,10 @@ class SmartDownloader {
         $this->initListener();
     }
 
+    public  function getFiberByProcessId(int $processId): Fiber{
+       return  $this->fibers[$processId];
+    }
+
     public function initUpdater(SqlCommonConnector $connector = null): UpdateService {
         if($this->updateService === null) {
             if($connector){
@@ -66,30 +72,29 @@ class SmartDownloader {
     }
 
 
-    private function fiberInitialization(TransactionDataClass $transaction):Fiber{
-        $fiber = new Fiber(function ($transaction): void {
+    private function fiberInitialization(TransactionDataClass $transaction):int{
+
+        $fiber = new Fiber(function ($transaction):  void {
             echo "Executing inside Fiber...\n";
-            Fiber::suspend('Paused');
             $downloader  = new FileDownloadService(new CurlServiceConnector());
             $downloader->start($transaction);
-
-            echo "Resumed Fiber execution!\n";
         });
-        return $fiber;
+        $process_index = count($this->fibers);
+        $this->fibers[$process_index] = $fiber;
+        return $process_index;
     }
-
-
 
     protected function initListener(): void {
         self::$listenerService = new ListenerService($this, $this->dataContainer);
-        self::$listenerService->subscribeTasksInitaiated(function (  ListenerTasks $task, TransactionDataClass $transaction ) {
+        self::$listenerService->subscribeTasksInitaiated(function (ListenerTasks $task, TransactionDataClass $transaction ) {
             if($task == ListenerTasks::DOWNLOAD_STARTED){
-                $downloader  = new FileDownloadService(new CurlServiceConnector());
                 LoggingService::info("Listener: New download task initiated");
-                $fiber = $this->fiberInitialization($transaction);
-                $fiber->start($transaction);
+                $process_index = $this->fiberInitialization($transaction);
+                $reported_value =   $this->fibers[$process_index]->start($transaction);
+                var_dump($reported_value);
             }
         });
+        LoggingService::info("Download process started");
     }
 
     /**
@@ -115,6 +120,11 @@ class SmartDownloader {
         }
         self::$listenerService->processRequest($request, $config_array);
         LoggingService::info("Request {$request->action} processed");
+        if($request->action == "start"){
+            sleep(10);
+            $newRequest = ["action"=>"stop", "file_url" => "https://storage.googleapis.com/public_test_access_ae/output_60sec.mp4"];
+            $this->getRequest($newRequest);
+        }
     }
 
     public function configure(Closure $context) {

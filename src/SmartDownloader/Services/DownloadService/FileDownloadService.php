@@ -2,6 +2,7 @@
 
 namespace SmartDownloader\Services\DownloadService;
 
+use Fiber;
 use SmartDownloader\Models\DownloadRequest;
 use SmartDownloader\Services\DownloadService\Enums\TransactionStatus;
 use SmartDownloader\Services\LoggingService\LoggingService;
@@ -16,7 +17,7 @@ class FileDownloadService {
     private DownloadConnectorInterface $connectorPlugin;
     private DownloadRequest $request;
     private TransactionDataClass $currentTransaction;
-    private array $downloads = [];
+    private array $download_chunks = [];
 
 
     public function __construct(DownloadConnectorInterface $connectorPlugin) {
@@ -24,8 +25,34 @@ class FileDownloadService {
     }
 
 
-    public function handleProgress(DownloadDataClass $downloadData ): void {
+    private function splitToReportableParts(int $reporting_interval_count) {
+        $chunk_count = (int)(($this->currentTransaction->file_size - $this->currentTransaction->bytes_saved) /  $this->currentTransaction->chunk_size);
+        if($reporting_interval_count < $chunk_count ) {
+            $download_chunk_size  =   ($chunk_count / $reporting_interval_count * $this->currentTransaction->chunk_size);
+        }else{
+            $download_chunk_size = $this->currentTransaction->chunk_size;
+        }
+        $start_byte = $this->currentTransaction->bytes_saved;
+        while ($start_byte  < $this->currentTransaction->file_size) {
+            $index = 0;
+            $start_byte += $download_chunk_size;
+            $this->download_chunks[$index] = ["byte_offset"=>$start_byte, "reported" =>false];
+        }
+    }
+
+    public function handleProgress(DownloadDataClass $downloadData): void {
         LoggingService::event("{$downloadData->bytes_start} / {$downloadData->bytes_read_to}");
+        $this->currentTransaction->file_size = $downloadData->bytes_read_to;
+       $to_report = array_filter($this->download_chunks, function ($key, $value) use ($downloadData) {
+            return ($this->download_chunks[$key]["byte_offset"]  < $downloadData->bytes_start && ($this->download_chunks[$key]["reported"] == false));
+        });
+       if(count($to_report) > 0){
+           $response = Fiber::suspend("Downloaded {$downloadData->bytes_start} / {$downloadData->bytes_read_to} of $downloadData->bytes_max");
+           LoggingService::info("Downloaded {$downloadData->bytes_start} / {$downloadData->bytes_read_to} of $downloadData->bytes_max");
+           foreach ($to_report as $value) {
+               $value["reported"] = true;
+           }
+       }
     }
 
     
@@ -35,6 +62,7 @@ class FileDownloadService {
             $this->currentTransaction->status = $status;
             $this->currentTransaction->can_resume = $can_resume;
             $this->currentTransaction->notifyUpdated($this->currentTransaction);
+            $this->splitToReportableParts(100);
         }
     }
     

@@ -27,6 +27,8 @@ class TransactionDataClass  extends DataClassBase
 
     public array $transactionData=[];
 
+    public int $file_size = 0;
+
     protected ?DownloadDataClass $downloadDataClass = null;
 
     protected array $keyProperties = ["id"=> 0 , "file_url" => "", "chunk_size" => "", "file_path" => "", "bytes_saved" => 0 ];
@@ -42,6 +44,9 @@ class TransactionDataClass  extends DataClassBase
 
     private function addTransactionData(array $data): void{
        array_push($this->transactionData ,$data);
+        if($this->file_size == 0 && $data["bytes_read_to"] > 0){
+            $this->file_size = $data["bytes_read_to"];
+        }
        $this->notifyUpdated($this);
     }
 
