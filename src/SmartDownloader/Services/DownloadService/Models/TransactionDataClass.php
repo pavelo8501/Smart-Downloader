@@ -12,8 +12,7 @@ use SmartDownloader\Services\DownloadService\Enums\TransactionStatus;
  * Class TransactionDataClass
  * @package SmartDownloader\Services\DownloadService\Models
  */
-class TransactionDataClass  extends DataClassBase
-{
+class TransactionDataClass  extends DataClassBase{
     public  int $id = 0;
 
     public  string $file_url = "";
@@ -23,8 +22,14 @@ class TransactionDataClass  extends DataClassBase
     
     public  TransactionStatus $status = TransactionStatus::UNINITIALIZED;
 
-    //["id", "file_url", "chunk_size", "file_path",  "bytes_saved"]
-//$this->execute(["id", "file_url", "chunk_size", "file_path",  "bytes_saved"]);
+
+    protected ?DownloadDataClass $childTransaction = null;
+
+    public function setChildTransaction(DownloadDataClass $downloadData){
+
+        $this->childTransaction = $downloadData;
+
+    }
 
     private  array $properties = ["id","file_url","chunk_size","file_path", "bytes_saved"];
 
@@ -33,11 +38,11 @@ class TransactionDataClass  extends DataClassBase
         parent::__construct();
     }
 
+
     /**
      * Notify that the transaction was updated.
      */
     public function notifyUpdated(){
-
         if($this->onUpdatedCallback){
             call_user_func($this->onUpdatedCallback, $this);
         }
