@@ -48,7 +48,7 @@ class LoggingService{
     protected static function log(LogLevel $level, string|Throwable $message, Throwable $exception = null){
         try{
             foreach (self::$logSubscriptions as  $logSubscription){
-                if($logSubscription->min_level->value >= $level->value){
+                if($logSubscription->min_level->value <= $level->value){
                     if($message instanceof  Throwable ){
                     $trace = $message->getTrace();
                         $formattedThrowable = "Exception: " . $message->getMessage() . PHP_EOL;
@@ -76,9 +76,9 @@ class LoggingService{
      * @param callable(string, string)$callbackFunction The callback function to be executed when a log event occurs.
      */
     public static function subscribe(LogLevel $minimalLevel, callable $callbackFunction){
-        if(!!!is_callable($callbackFunction)){
-           $newSubscripvion = new LogSubscription($minimalLevel, $callbackFunction);
-           self::$logSubscriptions[] = $newSubscripvion;
+        if(is_callable($callbackFunction)){
+           $newSubscription = new LogSubscription($minimalLevel, $callbackFunction);
+           self::$logSubscriptions[] = $newSubscription;
         }
     }
 

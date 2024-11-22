@@ -3,6 +3,7 @@
 namespace SmartDownloader;
 
 use Closure;
+use Fiber;
 use PDO;
 use SmartDownloader\Exceptions\DataProcessingException;
 use SmartDownloader\Exceptions\OperationsException;
@@ -10,6 +11,11 @@ use SmartDownloader\Exceptions\OperationsExceptionCode;
 use SmartDownloader\Models\ApiRequest;
 use SmartDownloader\Models\SDConfiguration;
 use SmartDownloader\Models\ServiceConfiguration;
+use SmartDownloader\Services\DownloadService\DownloadServicePlugins\CurlServiceConnector;
+use SmartDownloader\Services\DownloadService\DownloadServicePlugins\RequestDataClass;
+use SmartDownloader\Services\DownloadService\FileDownloadService;
+use SmartDownloader\Services\DownloadService\Models\TransactionDataClass;
+use SmartDownloader\Services\ListenerService\Enums\ListenerTasks;
 use SmartDownloader\Services\ListenerService\ListenerService;
 use SmartDownloader\Services\LoggingService\LoggingService;
 use SmartDownloader\Services\UpdateService\UpdateService;
@@ -34,6 +40,7 @@ class SmartDownloader {
      * @throws DataProcessingException
      */
     public function __construct(?SqlCommonConnector $db_connector){
+        $this::$logger = new LoggingService();
         if($db_connector == null){
             throw new OperationsException(
                 "DataConnector not provided unable to process data",
@@ -58,8 +65,31 @@ class SmartDownloader {
         return $this->updateService;
     }
 
+
+    private function fiberInitialization(TransactionDataClass $transaction):Fiber{
+        $fiber = new Fiber(function ($transaction): void {
+            echo "Executing inside Fiber...\n";
+            Fiber::suspend('Paused');
+            $downloader  = new FileDownloadService(new CurlServiceConnector());
+            $downloader->start($transaction);
+
+            echo "Resumed Fiber execution!\n";
+        });
+        return $fiber;
+    }
+
+
+
     protected function initListener(): void {
         self::$listenerService = new ListenerService($this, $this->dataContainer);
+        self::$listenerService->subscribeTasksInitaiated(function (  ListenerTasks $task, TransactionDataClass $transaction ) {
+            if($task == ListenerTasks::DOWNLOAD_STARTED){
+                $downloader  = new FileDownloadService(new CurlServiceConnector());
+                LoggingService::info("Listener: New download task initiated");
+                $fiber = $this->fiberInitialization($transaction);
+                $fiber->start($transaction);
+            }
+        });
     }
 
     /**
@@ -72,16 +102,19 @@ class SmartDownloader {
          $this->dataContainer->subscribeToTransactionUpdates([$this->updateService, "onUpdateTransaction"], "updateService");
     }
 
-
-
-    public function getRequest(ApiRequest $request):void{
-        // if(!$this->listenerService){
-        //     $this->listenerService = new ListenerService($this, $container);
-        // }
-        if($request->action == "start"){
-            $configArray =  self::$config->getConfigurationArray();
+    public function getRequest(ApiRequest | array $request):void{
+        if(is_array($request)){
+            $transformedRequest =  new ApiRequest();
+            $transformedRequest->action = $request['action'];
+            $transformedRequest->file_url = $request['file_url'];
+            $request = $transformedRequest;
         }
-        self::$listenerService->processRequest($request, $configArray);
+        $config_array = null;
+        if($request->action == "start"){
+            $config_array =  self::$config->getConfigurationArray();
+        }
+        self::$listenerService->processRequest($request, $config_array);
+        LoggingService::info("Request {$request->action} processed");
     }
 
     public function configure(Closure $context) {

@@ -4,6 +4,7 @@ namespace SmartDownloader\Services\DownloadService;
 
 use SmartDownloader\Models\DownloadRequest;
 use SmartDownloader\Services\DownloadService\Enums\TransactionStatus;
+use SmartDownloader\Services\LoggingService\LoggingService;
 use SmartDownloader\SmartDownloader;
 use SmartDownloader\Services\DownloadService\DownloadServicePlugins\Interfaces\DownloadConnectorInterface;
 use SmartDownloader\Services\DownloadService\Models\DownloadDataClass;
@@ -24,7 +25,7 @@ class FileDownloadService {
 
 
     public function handleProgress(DownloadDataClass $downloadData ): void {
-
+        LoggingService::event("{$downloadData->bytes_start} / {$downloadData->bytes_read_to}");
     }
 
     

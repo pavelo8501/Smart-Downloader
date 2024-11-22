@@ -10,6 +10,7 @@ use SmartDownloader\Models\ApiRequest;
 use SmartDownloader\Models\DownloadRequest;
 use SmartDownloader\Models\SDConfiguration;
 use SmartDownloader\Services\DownloadService\FileDownloadService;
+use SmartDownloader\Services\LoggingService\LoggingService;
 use SmartDownloader\SmartDownloader;
 use SmartDownloader\Services\ListenerService\Models\DataContainer;
 use SmartDownloader\Services\DownloadService\DownloadServicePlugins\CurlServiceConnector;
@@ -66,7 +67,7 @@ class ListenerService{
             $downloadRequest->file_url = $request->file_url;
             $downloadRequest->file_path =  "{$config->download_dir}/filename.ext";
             $newTransaction = $this->transactionContainer->registerNew($downloadRequest);
-            $this->fileDownloader->start($newTransaction);
+           // $this->fileDownloader->start($newTransaction);
             $this->notifyTaskInitiated(ListenerTasks::DOWNLOAD_STARTED, $newTransaction);
         }
     }
@@ -119,17 +120,19 @@ class ListenerService{
      * @param ApiRequest $request
      * @return void
      */
-    public function processRequest(ApiRequest $request, ?array $config = \null):void{
+    public function processRequest(ApiRequest $request, ?array $config = null):void{
         $this->currentRequest = $request;
+        LoggingService::info("New request received: {$request->action}");
         switch ($request->action){
             case "start":
                 if($config == \null){
-                    $this->parent::$logger::warn("Config not received on start download");
+                    LoggingService::warn("Config not received on start download");
                 }
                 $this->initializeDownload($request);
                 break;
-            case "pause":
+            case "stop":
                 $this->pauseDownload($request);
+                LoggingService::info("Stopping download :  {$request->file_url}");
                 break;
             case "resume":
                 $this->resumeDownload($request);
@@ -137,6 +140,9 @@ class ListenerService{
             case "cancel":
                 $this->cancelDownload($request);
                 break;
+            default:
+                //Report unknown command;
+                return;
         }
     }
 }

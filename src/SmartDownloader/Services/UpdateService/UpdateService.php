@@ -13,7 +13,6 @@ use SmartDownloader\Services\UpdateService\UpdateServicePlugins\SqlCommonConnect
 
 class UpdateService{
 
-
     public SqlCommonConnector $updaterPlugin;
     public function __construct(UpdateConnectorInterface $plugin){
         $this->updaterPlugin = $plugin;
