@@ -167,11 +167,8 @@ class CurlServiceConnector implements DownloadConnectorInterface{
     if ($this->reportStatusCallback) {
       call_user_func($this->reportStatusCallback, true, "complete", "Bytes transfered {$this->download_data->bytes_transferred}");
     }
-
   }
 
-
-  
   /**
    * Downloads a file from the given URL.
    *
@@ -212,7 +209,6 @@ class CurlServiceConnector implements DownloadConnectorInterface{
     $this->interruption_message = $message;
     $this->download = false;
     $this->download_data->finalizeRead($message);
-
   }
 
 }

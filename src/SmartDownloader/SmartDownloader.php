@@ -4,7 +4,6 @@ namespace SmartDownloader;
 
 use Closure;
 use Fiber;
-use PDO;
 use SmartDownloader\Exceptions\DataProcessingException;
 use SmartDownloader\Exceptions\OperationsException;
 use SmartDownloader\Exceptions\OperationsExceptionCode;
@@ -12,14 +11,12 @@ use SmartDownloader\Models\ApiRequest;
 use SmartDownloader\Models\SDConfiguration;
 use SmartDownloader\Models\ServiceConfiguration;
 use SmartDownloader\Services\DownloadService\DownloadServicePlugins\CurlServiceConnector;
-use SmartDownloader\Services\DownloadService\DownloadServicePlugins\RequestDataClass;
 use SmartDownloader\Services\DownloadService\FileDownloadService;
 use SmartDownloader\Services\DownloadService\Models\TransactionDataClass;
 use SmartDownloader\Services\ListenerService\Enums\ListenerTasks;
 use SmartDownloader\Services\ListenerService\ListenerService;
 use SmartDownloader\Services\LoggingService\LoggingService;
 use SmartDownloader\Services\UpdateService\UpdateService;
-use SmartDownloader\Services\UpdateService\UpdateServicePlugins\PostgresConnector;
 use SmartDownloader\Services\ListenerService\Models\DataContainer;
 use SmartDownloader\Services\UpdateService\UpdateServicePlugins\SqlCommonConnector;
 
@@ -70,7 +67,6 @@ class SmartDownloader {
         }
         return $this->updateService;
     }
-
 
     private function fiberInitialization(TransactionDataClass $transaction):int{
         $fiber = new Fiber(function ($transaction):  void {

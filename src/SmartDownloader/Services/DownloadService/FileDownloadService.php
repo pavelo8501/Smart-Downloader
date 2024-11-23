@@ -55,8 +55,6 @@ class FileDownloadService {
        }
     }
 
-    
-    
     public function reportStatus(bool  $can_resume, TransactionStatus  $status, string  $message): void {
         if($status == TransactionStatus::IN_PROGRESS){
             $this->currentTransaction->status = $status;

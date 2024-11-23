@@ -34,6 +34,7 @@
     "require": {
         "ext-pdo_pgsql": "*",
       "ext-pdo": "*",
-        "ext-curl": "*"
+        "ext-curl": "*",
+        "symfony/console": "^7.1"
     }
 }
