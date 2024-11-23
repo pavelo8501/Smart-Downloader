@@ -10,7 +10,7 @@ use SmartDownloader\Services\DownloadService\Enums\TransactionStatus;
 
 /**
  * Class TransactionDataClass
- * @package SmartDownloader\Services\DownloadService\Models
+ * @package SmartDownloader\Service\DownloadService\Models
  */
 class TransactionDataClass  extends DataClassBase
 {

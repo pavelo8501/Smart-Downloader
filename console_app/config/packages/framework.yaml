@@ -1,0 +1,3 @@
+parameters:
+  env(PHP_FILE): '%kernel.project_dir%/config/.runtime-evaluated.php'
+app:

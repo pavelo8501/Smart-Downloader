@@ -4,6 +4,7 @@ namespace SmartDownloader;
 
 use Closure;
 use Fiber;
+use PDO;
 use SmartDownloader\Exceptions\DataProcessingException;
 use SmartDownloader\Exceptions\OperationsException;
 use SmartDownloader\Exceptions\OperationsExceptionCode;
@@ -16,38 +17,42 @@ use SmartDownloader\Services\DownloadService\Models\TransactionDataClass;
 use SmartDownloader\Services\ListenerService\Enums\ListenerTasks;
 use SmartDownloader\Services\ListenerService\ListenerService;
 use SmartDownloader\Services\LoggingService\LoggingService;
+use SmartDownloader\Services\UpdateService\Interfaces\UpdateConnectorInterface;
 use SmartDownloader\Services\UpdateService\UpdateService;
 use SmartDownloader\Services\ListenerService\Models\DataContainer;
+use SmartDownloader\Services\UpdateService\UpdateServicePlugins\PostgresConnector;
 use SmartDownloader\Services\UpdateService\UpdateServicePlugins\SqlCommonConnector;
 
 class SmartDownloader {
 
-    public static LoggingService $logger;
-    public static SDConfiguration $config;
+    public  LoggingService $logger;
+    public  SDConfiguration $config;
 
     private static ListenerService $listenerServices;
     private ?DataContainer $dataContainer = null;
     protected ?UpdateService $updateService = null;
     private static ListenerService $listenerService ;
 
-    protected SqlCommonConnector $connector;
+    protected UpdateConnectorInterface $connector;
 
     protected  array $fibers = [];
+
+    protected PDO $pdo;
+
 
     /**
      * @throws OperationsException
      * @throws DataProcessingException
      */
-    public function __construct(?SqlCommonConnector $db_connector){
-        $this::$logger = new LoggingService();
-        if($db_connector == null){
-            throw new OperationsException(
-                "DataConnector not provided unable to process data",
-                OperationsExceptionCode::SETUP_FAILURE
-            );
+    public function __construct(?UpdateConnectorInterface $connector = null){
+        $this->logger = new LoggingService();
+        if($connector == null){
+            $this->pdo = new PDO("pgsql:host={$_ENV['DB_HOST']};port={$_ENV['DB_PORT']};dbname={$_ENV['DB_DATABASE']}",
+                $_ENV['DB_USERNAME'], $_ENV['DB_PASSWORD']);
+            $this->pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+            $this->connector = new PostgresConnector($this->pdo);
         }
-        $this->connector = $db_connector;
-        self::$config = new SDConfiguration();
+        $this->config = new SDConfiguration();
         $this->initUpdater();
         $this->initDataContainer();
         $this->initListener();
@@ -123,7 +128,7 @@ class SmartDownloader {
         }
         $config_array = null;
         if($request->action == "start"){
-            $config_array =  self::$config->getConfigurationArray();
+            $config_array =  $this->config->getConfigurationArray();
         }
         self::$listenerService->processRequest($request, $config_array);
         LoggingService::info("Request {$request->action} processed");

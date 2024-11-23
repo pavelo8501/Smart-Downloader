@@ -59,7 +59,7 @@ class ListenerService{
 
     private function initializeDownload(ApiRequest $request):void{
         $count = $this->transactionContainer->getCountByPropType("status", TransactionStatus::IN_PROGRESS);
-        $config =   SmartDownloader::$config;
+        $config =  $this->parent->config;
         if ($count <=   $config->max_downloads) {
             $downloadRequest = new DownloadRequest();
             $downloadRequest->file_url = $request->file_url;
@@ -71,9 +71,6 @@ class ListenerService{
 
     private function pauseDownload(ApiRequest $request){
         $transactions = $this->transactionContainer->getByPropertyValue("url", $request->file_url);
-        if(!$this->fileDownloader){
-            throw new OperationsException("file downloader not initialized", OperationsExceptionCode::SOURCE_UNDEFINED);
-        }
         //$this->fileDownloader->stop();
        // $this->notifyTaskInitiated(ListenerTasks::DOWNLOAD_STARTED, $transaction);
     }

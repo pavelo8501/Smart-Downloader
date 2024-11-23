@@ -9,7 +9,6 @@ use SmartDownloader\Exceptions\OperationsException;
 use SmartDownloader\Exceptions\OperationsExceptionCode;
 use SmartDownloader\Services\DownloadService\Enums\TransactionStatus;
 use SmartDownloader\Services\DownloadService\Models\TransactionDataClass;
-use SmartDownloader\Services\LoggingService\LoggingService;
 use SmartDownloader\Services\UpdateService\Interfaces\UpdateConnectorInterface;
 
 abstract class SqlCommonConnector implements UpdateConnectorInterface {

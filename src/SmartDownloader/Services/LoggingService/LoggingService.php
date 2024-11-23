@@ -4,7 +4,6 @@ namespace SmartDownloader\Services\LoggingService;
 
 use Closure;
 use Exception;
-use Illuminate\Validation\NestedRules;
 use SmartDownloader\Services\LoggingService\Enums\LogLevel;
 use Throwable;
 
