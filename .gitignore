@@ -13,3 +13,4 @@ src/index.php
 src/composer.php
 sd-laravel
 sd_symphony
+.env
