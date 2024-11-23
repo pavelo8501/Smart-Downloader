@@ -20,11 +20,14 @@ class PostgresConnector extends SqlCommonConnector implements UpdateConnectorInt
             return $this->postTransaction($transaction);
         }else{
              $this->patchTransaction($transaction);
-             return $transaction->id;
+              return $transaction->id;
         }
     }
-    public function getTransactions(bool $force_create = false ):array | null{
-        $this->recreateTable("transactions",[]);
+    public function getTransactions():array | null{
         return $this->fetchTransactions();
+    }
+
+    public function getTransaction(int $transaction_id) :?TransactionDataClass{
+       return  $this->pickTransaction($transaction_id);
     }
 }

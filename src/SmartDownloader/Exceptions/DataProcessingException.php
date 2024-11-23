@@ -11,6 +11,11 @@ enum DataProcessingExceptionCode : int {
     case NO_PROPERTY_BY_VALUE = 3;
     case PARENT_INIT_FAILED = 4;
     case INVALID_DATA_SUPPLIED = 5;
+    case DATASOURCE_CONNECTION_FAILURE = 9;
+    case DATASOURCE_INSERT_FAIL = 10;
+    case DATASOURCE_SELECT_FAIL = 11;
+    case DATASOURCE_UPDATE_FAIL = 12;
+    case DATASOURCE_CREATE_FAIL = 13;
 }
 
 

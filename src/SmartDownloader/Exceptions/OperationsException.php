@@ -14,8 +14,6 @@ enum OperationsExceptionCode: int {
     case KEY_CALLBACK_UNINITIALIZED = 6;
     case TRANSACTIONS_NOT_LOADED = 7;
     case SETUP_FAILURE = 8;
-    case DATASOURCE_CONNECTION_FAILURE = 9;
-    case DATASOURCE_INSERT_FAIL = 10;
 }
 
 

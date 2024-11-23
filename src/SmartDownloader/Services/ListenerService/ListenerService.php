@@ -3,6 +3,7 @@
 namespace SmartDownloader\Services\ListenerService;
 
 use Closure;
+use Exception;
 use PhpParser\Node\Expr\Throw_;
 use SmartDownloader\Exceptions\OperationsException;
 use SmartDownloader\Exceptions\OperationsExceptionCode;
@@ -10,6 +11,7 @@ use SmartDownloader\Models\ApiRequest;
 use SmartDownloader\Models\DownloadRequest;
 use SmartDownloader\Models\SDConfiguration;
 use SmartDownloader\Services\DownloadService\FileDownloadService;
+use SmartDownloader\Services\LoggingService\LoggingService;
 use SmartDownloader\SmartDownloader;
 use SmartDownloader\Services\ListenerService\Models\DataContainer;
 use SmartDownloader\Services\DownloadService\DownloadServicePlugins\CurlServiceConnector;
@@ -24,15 +26,14 @@ class ListenerService{
     public string  $file_download_path;
 
     private SmartDownloader $parent;
-    private SDConfiguration $config;
+    private ?SDConfiguration $config;
 
     private ApiRequest $currentRequest;
 
     private DataContainer $transactionContainer;
-    private ?FileDownloadService $fileDownloader = null;
+  //  private ?FileDownloadService $fileDownloader = null;
     
-    public ?Closure $onTaskInitiated = null;
-
+    public array  $onTaskCallbacks = [];
 
     public function __construct(
         SmartDownloader $parent,
@@ -40,32 +41,30 @@ class ListenerService{
     ){
         $this->parent = $parent;
         $this->transactionContainer = $transactionContainer;
-        if ($this->fileDownloader === null) {
-            $this->fileDownloader = new FileDownloadService(new CurlServiceConnector());
-        }
+//        if ($this->fileDownloader === null) {
+//            $this->fileDownloader = new FileDownloadService(new CurlServiceConnector());
+//        }
 
         //$this->transactionContainer = new DataContainer($this->updatator->getTransactions());
     }
 
 
-    private function notifyTaskInitiated(ListenerTasks  $task ,TransactionDataClass $transaction){
-        if($this->onTaskInitiated){
-            call_user_func($this->onTaskInitiated, $task ,$transaction);
+    private function notifyTaskInitiated(ListenerTasks  $task ,TransactionDataClass $transaction):void{
+        if(array_key_exists($task->value,$this->onTaskCallbacks)){
+            call_user_func($this->onTaskCallbacks[$task->value],$task ,$transaction);
+        }else{
+            LoggingService::warn("Task [$task->value] not initialized");
         }
     }
 
-    private function initializeDownload(ApiRequest $request){
-        if($this->fileDownloader === null){
-            $this->fileDownloader = new FileDownloadService(new CurlServiceConnector());
-        }
-
+    private function initializeDownload(ApiRequest $request):void{
         $count = $this->transactionContainer->getCountByPropType("status", TransactionStatus::IN_PROGRESS);
-        if ($count <= $this->config->max_downloads) {
+        $config =   SmartDownloader::$config;
+        if ($count <=   $config->max_downloads) {
             $downloadRequest = new DownloadRequest();
             $downloadRequest->file_url = $request->file_url;
-            $downloadRequest->file_path = $this->config->download_dir + "//filename.ext";
+            $downloadRequest->file_path =  "{$config->download_dir}/filename.ext";
             $newTransaction = $this->transactionContainer->registerNew($downloadRequest);
-            $this->fileDownloader->start($request->file_url, $this->config->chunk_size, $newTransaction);
             $this->notifyTaskInitiated(ListenerTasks::DOWNLOAD_STARTED, $newTransaction);
         }
     }
@@ -102,14 +101,21 @@ class ListenerService{
         // }
     }
 
-    private function cancelDownload(ApiRequest $request) {
-        if ($this->fileDownloader !== null) {
-            $this->fileDownloader->stop();
+
+    private function stopDownload(ApiRequest $request):void {
+        if(array_key_exists(ListenerTasks::DOWNLOAD_PAUSED->value, $this->onTaskCallbacks)){
+            call_user_func($this->onTaskCallbacks[ListenerTasks::DOWNLOAD_PAUSED->value], $request);
+        }else{
+            LoggingService::warn("Task {ListenerTasks::DOWNLOAD_PAUSED} not initialized");
         }
     }
 
-    public function subscribeTasksInitaiated(callable $callback){
-        $this->onTaskInitiated = Closure::fromCallable($callback);
+    public function subscribeTasksInitaiated(ListenerTasks $task, callable $callback){
+        try {
+            $this->onTaskCallbacks[$task->value] = $callback;
+        }catch (Exception $exception){
+            LoggingService::error($exception->getMessage());
+        }
     }
 
     /**
@@ -118,17 +124,19 @@ class ListenerService{
      * @param ApiRequest $request
      * @return void
      */
-    public function processRequest(ApiRequest $request, ?array $config = \null):void{
+    public function processRequest(ApiRequest $request, ?array $config = null):void{
         $this->currentRequest = $request;
+        LoggingService::info("New request received: {$request->action}");
         switch ($request->action){
             case "start":
                 if($config == \null){
-                    $this->parent::$logger::warn("Config not received on start download");
+                    LoggingService::warn("Config not received on start download");
                 }
                 $this->initializeDownload($request);
                 break;
-            case "pause":
-                $this->pauseDownload($request);
+            case "stop":
+                $this->stopDownload($request);
+                LoggingService::info("Stopping download :  {$request->file_url}");
                 break;
             case "resume":
                 $this->resumeDownload($request);
@@ -136,6 +144,9 @@ class ListenerService{
             case "cancel":
                 $this->cancelDownload($request);
                 break;
+            default:
+                //Report unknown command;
+                return;
         }
     }
 }

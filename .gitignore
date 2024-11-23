@@ -7,3 +7,9 @@ docker/nginx/logs/
 config.php
 index.php
 pull.txt
+src/config/
+src/bootstrap.php
+src/index.php
+src/composer.php
+/sd-laravel
+/sd_symphony

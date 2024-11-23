@@ -14,33 +14,52 @@ use SmartDownloader\Services\DownloadService\Enums\TransactionStatus;
  */
 class TransactionDataClass  extends DataClassBase
 {
-    public  int $id = 0;
+    public int $id = 0;
 
-    public  string $file_url = "";
-    public  string $file_path = "";
-    public  int $chunk_size = 1024;
-    public  int $bytes_saved = 0;
-    
-    public  TransactionStatus $status = TransactionStatus::UNINITIALIZED;
+    public string $file_url = "";
+    public string $file_path = "";
+    public int $chunk_size = 1024;
+    public int $bytes_saved = 0;
 
-    //["id", "file_url", "chunk_size", "file_path",  "bytes_saved"]
-//$this->execute(["id", "file_url", "chunk_size", "file_path",  "bytes_saved"]);
+    public TransactionStatus $status = TransactionStatus::UNINITIALIZED;
 
-    private  array $properties = ["id","file_url","chunk_size","file_path", "bytes_saved"];
+    public bool $can_resume = false;
 
-    public function __construct(){
+    public array $transactionData=[];
 
-        parent::__construct();
+    public int $file_size = 0;
+
+    protected ?DownloadDataClass $downloadDataClass = null;
+
+    protected array $keyProperties = ["id"=> 0 , "file_url" => "", "chunk_size" => "", "file_path" => "", "bytes_saved" => 0 ];
+
+    public function __construct(array $property_values = null){
+        if(is_array($property_values)){
+            $this->initFromAssociative($property_values);
+        }
+        parent::__construct(
+            $this->keyProperties
+        );
     }
 
-    /**
-     * Notify that the transaction was updated.
-     */
-    public function notifyUpdated(){
-
-        if($this->onUpdatedCallback){
-            call_user_func($this->onUpdatedCallback, $this);
+    private function addTransactionData(array $data): void{
+       array_push($this->transactionData ,$data);
+        if($this->file_size == 0 && $data["bytes_read_to"] > 0){
+            $this->file_size = $data["bytes_read_to"];
         }
+       $this->notifyUpdated($this);
+    }
+
+    public function setTransactionData(array $data): void{
+        $this->transactionData = $data;
+    }
+
+    public function setDownloadDataClass(DownloadDataClass $downloadData)
+    {
+        $this->downloadDataClass = $downloadData;
+        $downloadData->onUpdatedCallback = function (DownloadDataClass $callingDataClass) {
+               $this->addTransactionData(DataClassBase::toAssocArray($callingDataClass));
+        };
     }
 
 

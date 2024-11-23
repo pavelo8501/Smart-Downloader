@@ -21,6 +21,14 @@ class DownloadDataClass  extends DataClassBase {
 
     private int $bytes_left = 0;
 
+    protected array $keyProperties = [];
+
+    public function __construct() {
+        parent::__construct(
+            $this->keyProperties = ["id"=>0, "bytes_start" =>0, "bytes_read_to" => 0, "chunk_size"=>0, "bytes_max" => 0]
+        );
+    }
+
     public function initializeFirstRead(){
        $this->bytes_read_to = $this->chunk_size -1;
        $this->stop_download = false;
@@ -47,6 +55,7 @@ class DownloadDataClass  extends DataClassBase {
         if($this->stop_download == false){
             $this->bytes_start += $bytes_read;
             $this->bytes_read_to = $this->bytes_start + $this->chunk_size - 1;
+            $this->notifyUpdated($this);
         }
     }
 
