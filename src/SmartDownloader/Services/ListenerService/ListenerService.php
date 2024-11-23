@@ -33,7 +33,7 @@ class ListenerService{
     private DataContainer $transactionContainer;
   //  private ?FileDownloadService $fileDownloader = null;
     
-    public ?Closure $onTaskInitiated = null;
+    public array  $onTaskCallbacks = [];
 
     public function __construct(
         SmartDownloader $parent,
@@ -49,9 +49,11 @@ class ListenerService{
     }
 
 
-    private function notifyTaskInitiated(ListenerTasks  $task ,TransactionDataClass $transaction){
-        if($this->onTaskInitiated){
-            call_user_func($this->onTaskInitiated, $task ,$transaction);
+    private function notifyTaskInitiated(ListenerTasks  $task ,TransactionDataClass $transaction):void{
+        if(array_key_exists($task->value,$this->onTaskCallbacks)){
+            call_user_func($this->onTaskCallbacks[$task->value],$task ,$transaction);
+        }else{
+            LoggingService::warn("Task [$task->value] not initialized");
         }
     }
 
@@ -101,17 +103,16 @@ class ListenerService{
 
 
     private function stopDownload(ApiRequest $request):void {
-        try {
-            $value =  $this->parent::getFiberByProcessId(0)?->resume($request) ?? null;
-            $a =  $value;
-        }catch (Exception $exception){
-            LoggingService::error($exception->getMessage());
+        if(array_key_exists(ListenerTasks::DOWNLOAD_PAUSED->value, $this->onTaskCallbacks)){
+            call_user_func($this->onTaskCallbacks[ListenerTasks::DOWNLOAD_PAUSED->value], $request);
+        }else{
+            LoggingService::warn("Task {ListenerTasks::DOWNLOAD_PAUSED} not initialized");
         }
     }
 
-    public function subscribeTasksInitaiated(callable $callback){
+    public function subscribeTasksInitaiated(ListenerTasks $task, callable $callback){
         try {
-            $this->onTaskInitiated = Closure::fromCallable($callback);
+            $this->onTaskCallbacks[$task->value] = $callback;
         }catch (Exception $exception){
             LoggingService::error($exception->getMessage());
         }

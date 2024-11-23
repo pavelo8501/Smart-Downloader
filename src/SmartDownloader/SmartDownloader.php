@@ -73,10 +73,10 @@ class SmartDownloader {
 
 
     private function fiberInitialization(TransactionDataClass $transaction):int{
-
         $fiber = new Fiber(function ($transaction):  void {
             echo "Executing inside Fiber...\n";
             $downloader  = new FileDownloadService(new CurlServiceConnector());
+            $data = Fiber::suspend("Waiting for data...");
             $downloader->start($transaction);
         });
         $process_index = count($this->fibers);
@@ -86,15 +86,26 @@ class SmartDownloader {
 
     protected function initListener(): void {
         self::$listenerService = new ListenerService($this, $this->dataContainer);
-        self::$listenerService->subscribeTasksInitaiated(function (ListenerTasks $task, TransactionDataClass $transaction ) {
+        self::$listenerService->subscribeTasksInitaiated(ListenerTasks::DOWNLOAD_STARTED, function (ListenerTasks $task, TransactionDataClass $transaction ) {
             if($task == ListenerTasks::DOWNLOAD_STARTED){
                 LoggingService::info("Listener: New download task initiated");
                 $process_index = $this->fiberInitialization($transaction);
-                $reported_value =   $this->fibers[$process_index]->start($transaction);
+                 $reported_value =  $this->fibers[$process_index]->start($transaction);
+                  while ($this->fibers[$process_index]->isSuspended()) {
+                      $response["status"] = "ok";
+                      $json_output = json_encode($response);
+                      http_response_code(response_code: 200);
+                      echo $json_output;
+                      $this->fibers[$process_index]->resume();
+                  }
                 var_dump($reported_value);
+                LoggingService::info("Listener: download processing");
             }
         });
-        LoggingService::info("Download process started");
+
+        self::$listenerService->subscribeTasksInitaiated(ListenerTasks::DOWNLOAD_PAUSED, function (ApiRequest $request) {
+            $this->fibers[0]->resume($request);
+        });
     }
 
     /**
@@ -120,11 +131,8 @@ class SmartDownloader {
         }
         self::$listenerService->processRequest($request, $config_array);
         LoggingService::info("Request {$request->action} processed");
-        if($request->action == "start"){
-            sleep(10);
-            $newRequest = ["action"=>"stop", "file_url" => "https://storage.googleapis.com/public_test_access_ae/output_60sec.mp4"];
-            $this->getRequest($newRequest);
-        }
+        $newRequest = ["action"=>"stop", "file_url" => "https://storage.googleapis.com/public_test_access_ae/output_60sec.mp4"];
+        $this->getRequest($newRequest);
     }
 
     public function configure(Closure $context) {
