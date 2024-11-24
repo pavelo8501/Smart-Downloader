@@ -2,26 +2,18 @@
 
 namespace SmartDownloader\Models;
 
+use SmartDownloader\Enumerators\ChunkSize;
 use SmartDownloader\Enumerators\RateExceedAction;
 use SmartDownloader\Exceptions\DataProcessingException;
 use SmartDownloader\Exceptions\DataProcessingExceptionCode;
 
-enum ChinkSize: int{
-    case MB_1 =  1048576;
-    case MB_2  = 2097152;
-    case MB_5 =  5242880;
-    case MB_10 = 10485760;
-    case MB_15 = 15728640;
-}
-
-
 /**
- * Class SDConfiguration
+ * Class ConfigProperties
  * 
  * This class holds configuration settings for the Smart Downloader.
  * It provides static properties for default values and a method to retrieve property values dynamically.
  */
-class SDConfiguration{
+class ConfigProperties{
     /**
      * @var string The directory where downloaded files will be saved.
      */
@@ -42,10 +34,12 @@ class SDConfiguration{
      */
     public int $retry_attempts = 5;
 
+    public int $retry_await_time = 20;
+
     /**
      * @var int The size of each chunk to download in bytes.
      */
-    public ChinkSize $chunk_size = ChinkSize::MB_2;
+    public ChunkSize $chunk_size = ChunkSize::MB_2;
 
     /**
      * @var RateExceedAction The action to take when the download rate limit is exceeded.
@@ -70,7 +64,11 @@ class SDConfiguration{
          return  [
             "download_dir"=> $this->download_dir,
             "temp_dir" => $this->temp_dir,
-            "max_downloads" => $this->max_downloads
+            "retry_attempts" => $this->retry_attempts,
+            "retry_await_time" => $this->retry_attempts,
+            "rate_exceed_action" => $this->rate_exceed_action->name,
+            "max_downloads" => $this->max_downloads,
+            "chunk_size" => $this->chunk_size,
          ];
     }
 }

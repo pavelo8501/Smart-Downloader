@@ -6,17 +6,12 @@ use SmartDownloader\Services\DownloadService\Models\TransactionDataClass;
 
 interface UpdateConnectorInterface {
 
-    public function saveData();
-
-    public function updateData();
-
-    public function selectData(): array|null;
-
-    public function pickData(): mixed;
+    public function getTransaction(int $transaction_id): TransactionDataClass | null;
 
     function saveTransaction(TransactionDataClass $transaction):int;
 
-    function getTransactions(): array | null;
+    function getTransactions(array $transactions): array | null;
 
+    function deleteTransactions(array $transactions): bool;
 
 }

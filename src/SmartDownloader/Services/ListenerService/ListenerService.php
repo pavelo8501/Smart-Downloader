@@ -5,6 +5,7 @@ namespace SmartDownloader\Services\ListenerService;
 use Closure;
 use Exception;
 use PhpParser\Node\Expr\Throw_;
+use SmartDownloader\Enumerators\RateExceedAction;
 use SmartDownloader\Exceptions\OperationsException;
 use SmartDownloader\Exceptions\OperationsExceptionCode;
 use SmartDownloader\Models\ApiRequest;
@@ -20,94 +21,97 @@ use SmartDownloader\Services\DownloadService\Models\TransactionDataClass;
 use SmartDownloader\Services\ListenerService\Enums\ListenerTasks;
 use SmartDownloader\Services\UpdateService\UpdateServicePlugins\PostgresConnector;
 use SmartDownloader\Services\UpdateService\UpdateService;
+use function Symfony\Component\String\s;
 
 class ListenerService{
 
-    public string  $file_download_path;
-
     private SmartDownloader $parent;
-    private ?SDConfiguration $config;
-
-    private ApiRequest $currentRequest;
 
     private DataContainer $transactionContainer;
-  //  private ?FileDownloadService $fileDownloader = null;
-    
+
     public array  $onTaskCallbacks = [];
 
-    public function __construct(
-        SmartDownloader $parent,
-        DataContainer $transactionContainer
-    ){
-        $this->parent = $parent;
-        $this->transactionContainer = $transactionContainer;
-//        if ($this->fileDownloader === null) {
-//            $this->fileDownloader = new FileDownloadService(new CurlServiceConnector());
-//        }
+    public static function reportResult(TransactionDataClass $transaction, ListenerTasks $forTask):string {
+        $response = [];
+        switch ($forTask){
+            case ListenerTasks::ON_START:
+                $response = ["id" => $transaction->id, "status" => "OK"];
+                break;
+            case ListenerTasks::ON_PAUSE:
+                $response = ["id" => $transaction->id, "status" => "STOP"];
+                break;
+            case ListenerTasks::ON_RESUME:
+                $response = ["id" => $transaction->id, "status" => "RESUME"];
+                break;
+            case ListenerTasks::ON_CANCEL:
+                $response = ["id" => $transaction->id, "status" => "CANCELLED"];
+        }
+        return  json_encode($response);
+    }
 
-        //$this->transactionContainer = new DataContainer($this->updatator->getTransactions());
+    public static function reportRejected(TransactionDataClass $transaction):string{
+        $response = [
+            "file_url" => $transaction->file_url,
+            "status" => "REJECTED",
+            "message" => "Maximum number of simultaneous downloads   exceeded",
+        ];
+        return  json_encode($response);
     }
 
 
-    private function notifyTaskInitiated(ListenerTasks  $task ,TransactionDataClass $transaction):void{
-        if(array_key_exists($task->value,$this->onTaskCallbacks)){
+    public function __construct(SmartDownloader $parent, DataContainer $transactionContainer){
+        $this->parent = $parent;
+        $this->transactionContainer = $transactionContainer;
+    }
+
+    protected function notifyOnTask(ListenerTasks  $task,TransactionDataClass $transaction):void{
+        if(array_key_exists($task->value, $this->onTaskCallbacks)){
             call_user_func($this->onTaskCallbacks[$task->value],$task ,$transaction);
         }else{
             LoggingService::warn("Task [$task->value] not initialized");
         }
     }
 
-    private function initializeDownload(ApiRequest $request):void{
+    public function initializeDownload(ApiRequest $request):void{
         $count = $this->transactionContainer->getCountByPropType("status", TransactionStatus::IN_PROGRESS);
-        $config =  $this->parent->config;
-        if ($count <=   $config->max_downloads) {
-            $downloadRequest = new DownloadRequest();
-            $downloadRequest->file_url = $request->file_url;
-            $downloadRequest->file_path =  "{$config->download_dir}/filename.ext";
-            $newTransaction = $this->transactionContainer->registerNew($downloadRequest);
-            $this->notifyTaskInitiated(ListenerTasks::DOWNLOAD_STARTED, $newTransaction);
+        $config =  $this->parent->configuration->properties;
+        $downloadRequest = new DownloadRequest();
+        $downloadRequest->file_url = $request->file_url;
+        $downloadRequest->file_path = "{$config->download_dir}/filename.ext";
+        $newTransaction = $this->transactionContainer->registerNew($downloadRequest);
+        if($count >  $config->max_downloads && $config->rate_exceed_action == RateExceedAction::QUE){
+            $newTransaction->status = TransactionStatus::SUSPENDED;
         }
+        if($count >  $config->max_downloads && $config->rate_exceed_action == RateExceedAction::CANCEL) {
+            ListenerService::reportRejected($newTransaction);
+        }
+        $this->notifyOnTask(ListenerTasks::ON_START, $newTransaction);
+        $this->parent->issueCommand("downloader", "start", $newTransaction);
+        sleep(3);
+        $this->parent->issueCommand("downloader", "stop", $newTransaction);
     }
 
-    private function pauseDownload(ApiRequest $request){
-        $transactions = $this->transactionContainer->getByPropertyValue("url", $request->file_url);
-        //$this->fileDownloader->stop();
-       // $this->notifyTaskInitiated(ListenerTasks::DOWNLOAD_STARTED, $transaction);
-    }
-
-    private function notifyResumeDownload(ApiRequest $request){
-       
-    }
     public ?Closure $onDownloadResume = \null;
-    protected function resumeDownload(ApiRequest $request){
-        $found_transaction =  $this->transactionContainer->getByPropertyValue("file_url", $request->file_url);
-        if ($found_transaction == \null) {
-            //TO DO REQUES FROM DB
-        }
-        $this->notifyResumeDownload($found_transaction);
-        if($this->onDownloadResume == \null){
-            throw new OperationsException("onDownloadResume Callback not initialized in Listener", OperationsExceptionCode::KEY_CALLBACK_UNINITIALIZED);
-        }
-
-        // if($this->updatator !== null){
-        //     $this->updatator = new UpdateService(new PostgresConnector());
-        //     $transaction = $this->updatator->getTransaction(0);
-        //     if ($this->fileDownloader !== null) {
-        //          $this->fileDownloader->resume($transaction->file_url, $this->config->chunk_size, $transaction->bytes_saved);
-        //     }
-        // }
-    }
-
-
-    private function stopDownload(ApiRequest $request):void {
-        if(array_key_exists(ListenerTasks::DOWNLOAD_PAUSED->value, $this->onTaskCallbacks)){
-            call_user_func($this->onTaskCallbacks[ListenerTasks::DOWNLOAD_PAUSED->value], $request);
-        }else{
-            LoggingService::warn("Task {ListenerTasks::DOWNLOAD_PAUSED} not initialized");
+    protected function resumeDownload(ApiRequest $request): void
+    {
+        $transactions =  $this->transactionContainer->getByPropertyValue("file_url", $request->file_url);
+        if(count($transactions) > 0){
+            $this->notifyOnTask(ListenerTasks::ON_RESUME, $transactions[0]);
         }
     }
 
-    public function subscribeTasksInitaiated(ListenerTasks $task, callable $callback){
+    protected function stopDownload(ApiRequest $request):void {
+        $transactions =  $this->transactionContainer->getByPropertyValue("file_url", $request->file_url);
+        if(count($transactions)>0){
+            $this->notifyOnTask(ListenerTasks::ON_PAUSE, $transactions[0]);
+        }
+    }
+    protected function cancelDownload(ApiRequest $request):void{
+
+    }
+
+
+    public function subscribeTasksInitiated(ListenerTasks $task, callable $callback):void{
         try {
             $this->onTaskCallbacks[$task->value] = $callback;
         }catch (Exception $exception){
@@ -122,7 +126,6 @@ class ListenerService{
      * @return void
      */
     public function processRequest(ApiRequest $request, ?array $config = null):void{
-        $this->currentRequest = $request;
         LoggingService::info("New request received: {$request->action}");
         switch ($request->action){
             case "start":
@@ -133,7 +136,7 @@ class ListenerService{
                 break;
             case "stop":
                 $this->stopDownload($request);
-                LoggingService::info("Stopping download :  {$request->file_url}");
+                LoggingService::info("Stopping download : {$request->file_url}");
                 break;
             case "resume":
                 $this->resumeDownload($request);

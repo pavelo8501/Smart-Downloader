@@ -2,6 +2,7 @@
 
 namespace SmartDownloader\Services\UpdateService\UpdateServicePlugins;
 
+use Exception;
 use PDO;
 use SmartDownloader\Exceptions\DataProcessingException;
 use SmartDownloader\Exceptions\DataProcessingExceptionCode;
@@ -11,16 +12,12 @@ use SmartDownloader\Services\DownloadService\Enums\TransactionStatus;
 use SmartDownloader\Services\DownloadService\Models\TransactionDataClass;
 use SmartDownloader\Services\UpdateService\Interfaces\UpdateConnectorInterface;
 
-abstract class SqlCommonConnector implements UpdateConnectorInterface {
+abstract class PDOCommonConnector implements UpdateConnectorInterface {
 
-    protected PDO  $db_connector;
+    protected PDO $db_connector;
 
-    public function __construct($db) {
-        try {
+    public function __construct(PDO $db) {
             $this->db_connector = $db;
-        }catch (\Exception $exception){
-            throw new OperationsException($exception->getMessage(), OperationsExceptionCode::COMPONENT_UNINITIALIZED );
-        }
     }
     private function initConnector(): void{
 //        if($this->db_connector->isConnected() == false){
@@ -29,33 +26,37 @@ abstract class SqlCommonConnector implements UpdateConnectorInterface {
     }
 
     public  function strForSql(string $str): string {
-
         $cleanSql = preg_replace('/[\x00-\x1F\x7F]/', '', $str);
         $cleanSql = preg_replace('/\s+/', ' ', $cleanSql);
-        $cleanSql = trim($cleanSql);
-        return $cleanSql;
+        return trim($cleanSql);
     }
 
-    public function recreateTable(string $table_name, array $columns):bool{
+    public function recreateTable(string $table_name, array $columns, mixed $arrayValues):bool{
         try {
             $table_name = strtolower($table_name);
             $dropSql = "DROP TABLE IF EXISTS {$table_name};";
-
             $stmt_drop = $this->db_connector->prepare($dropSql);
 
-            $createSql = $this->strForSql("CREATE TABLE {$table_name} (
-                id SERIAL PRIMARY KEY,
-                file_url VARCHAR NOT NULL,
-                file_path VARCHAR,
-                chunk_size INT DEFAULT 0,
-                bytes_saved INT DEFAULT 0,
-                transaction_data JSONB,
-                can_resume SMALLINT DEFAULT 0,
-                status SMALLINT DEFAULT 0
-            );"
-            );
-            $stmt_create = $this->db_connector->prepare($createSql);
-
+             $sqlQuery = "";
+             $this->strForSql("CREATE TABLE {$table_name}
+                        id SERIAL PRIMARY KEY,");
+            foreach ($columns as $key => $value) {
+                $str = "";
+                switch ($value[$key]->Type){
+                    case "string":
+                        $str =  "{$value[$key]} VARCHAR NOT NULL";
+                     break;
+                     case "int":
+                         $str = "{$value[$key]} INT DEFAULT 0";
+                         break;
+                     case "array":
+                         $str =  "{$value[$key]} ARRAY({$value[$key]})";
+                 break;
+                }
+              $sqlQuery .= $this->strForSql($str.",");
+            }
+            $sqlQuery = rtrim($sqlQuery,",");
+            $stmt_create = $this->db_connector->prepare($sqlQuery);
             $this->db_connector->beginTransaction();
             $stmt_drop->execute();
             $stmt_create->execute();
@@ -67,13 +68,20 @@ abstract class SqlCommonConnector implements UpdateConnectorInterface {
         }
     }
 
-    protected function fetchTransactions(): array | null {
+    protected function select(array $params): array | null {
         try {
             $this->initConnector();
-            $sql =  $this->strForSql("SELECT * FROM  transactions WHERE status IN  (:status1, :status2)");
+            $statuses  = "";
+            foreach ($params as $parameter) {
+                foreach ($parameter as $key => $value) {
+                    $statuses .=  "{$value}, ";
+                }
+            }
+            $statuses = trim($statuses, ", ");
+            $sql =  $this->strForSql("SELECT * FROM  transactions WHERE status IN  ({$statuses})");
             $stmt = $this->db_connector->prepare($sql);
-            $stmt->bindValue(':status1', TransactionStatus::IN_PROGRESS->value, PDO::PARAM_INT);
-            $stmt->bindValue(':status2', TransactionStatus::SUSPENDED->value, PDO::PARAM_INT);
+           // $stmt->bindValue(':status1', TransactionStatus::IN_PROGRESS->value, PDO::PARAM_INT);
+           // $stmt->bindValue(':status2', TransactionStatus::SUSPENDED->value, PDO::PARAM_INT);
             $stmt->execute();
             $records = $stmt->fetchAll(PDO::FETCH_ASSOC);
             $transactions = [];
@@ -121,6 +129,10 @@ abstract class SqlCommonConnector implements UpdateConnectorInterface {
         }
     }
 
+    public function pickData(int $transaction_id): TransactionDataClass | null{
+        return null;
+    }
+
     protected function postTransaction(TransactionDataClass $transaction ): int{
         try {
             $this->initConnector();
@@ -138,18 +150,35 @@ abstract class SqlCommonConnector implements UpdateConnectorInterface {
         }
     }
 
+    protected function delete($table_name, $params ):bool{
+        $this->initConnector();
+        try {
+
+            $where = "";
+            foreach ($params as $key => $value) {
+                $where .= "{$key} = {$key} AND";
+            }
+            $where = rtrim($where, " AND");
+            $sql = $this->strForSql("DELETE FROM {$table_name}
+            WHERE {$where}");
+            $stmt = $this->db_connector->prepare($sql);
+            $stmt->execute();
+            return true;
+        }catch (Exception $exception){
+            throw  new DataProcessingException($exception->getMessage(),
+                DataProcessingExceptionCode::DATASOURCE_DELETE_FAIL);
+        }
+    }
+
     public function saveData() {
     }
 
     public function updateData() {
+
     }
 
     public function selectData():array|null {
         return [];
-    }
-
-    public function pickData():mixed{
-        return null;
     }
 
     public function createTable(string $table_name, array $columns){

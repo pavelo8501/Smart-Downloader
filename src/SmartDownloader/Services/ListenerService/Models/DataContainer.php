@@ -4,16 +4,17 @@
 namespace SmartDownloader\Services\ListenerService\Models;
 
 use Closure;
-use PHPUnit\Event\Runtime\OperatingSystem;
 use SmartDownloader\Exceptions\DataProcessingException;
 use SmartDownloader\Exceptions\DataProcessingExceptionCode;
 use SmartDownloader\Exceptions\OperationsException;
 use SmartDownloader\Exceptions\OperationsExceptionCode;
 use SmartDownloader\Models\DownloadRequest;
+use SmartDownloader\Services\DownloadService\Enums\TransactionStatus;
 use SmartDownloader\Services\DownloadService\Models\TransactionDataClass;
 use SmartDownloader\Services\ListenerService\Interfaces\TransactionDataContainer;
-use Symfony\Component\Clock\Clock;
+use SmartDownloader\Services\LoggingService\LoggingService;
 
+use SmartDownloader\Services\UpdateService\Enums\DataOperationType;
 use function PHPUnit\Framework\callback;
 
 class DataContainer implements TransactionDataContainer{
@@ -27,35 +28,37 @@ class DataContainer implements TransactionDataContainer{
 
     public ?Closure $RequestTransactionsHistory = null;
     private array $onRecordUpdatedCallbacks = [];
-    private ?Closure $onDataRequested = null;
+    private ?Closure $dataRequestCallback = null;
 
     /**
      * @throws OperationsException
      * @throws DataProcessingException
      */
     public function __construct(
-        ?callable $RequestTransactionsHistory = null,
-        ?callable $onDataRequested = null
+        ?callable $dataRequestCallback = null
     ){
-        if(is_callable($RequestTransactionsHistory)){
-            $this->RequestTransactionsHistory = Closure::fromCallable($RequestTransactionsHistory);
-        }
-
-        if($onDataRequested != null){
-            if(!is_callable($onDataRequested)){
+        if($dataRequestCallback != null){
+            if(!is_callable($dataRequestCallback)){
                 throw new DataProcessingException(
                     "onDataRequested supplied to DataContainer is not callable",
                     DataProcessingExceptionCode::INVALID_DATA_SUPPLIED
                 );
             }
-            $this->onDataRequested = Closure::fromCallable($onDataRequested);
-            $this->requestData();
+            $this->dataRequestCallback = $dataRequestCallback(...);
+            $this->onInitialized();
         }
-        if(count($this->records)  == 0){
-            if($this->RequestTransactionsHistory == null){
-                throw new OperationsException("RequestTransactionsHistory callback uninitialized in Data Container", OperationsExceptionCode::KEY_CALLBACK_UNINITIALIZED);
+    }
+
+    private function onInitialized():void{
+        $whereStatus = [];
+        $whereStatus[] =   ["status" => TransactionStatus::IN_PROGRESS->value];
+        $whereStatus[] = ["status" => TransactionStatus::SUSPENDED->value];
+        $transactions =  call_user_func($this->dataRequestCallback, DataOperationType::Get, $whereStatus);
+        if (count($transactions) > 0 ) {
+            foreach ($transactions as $transaction) {
+                $transaction->setOnUpdatedCallback([$this, 'onTransactionUpdated']);
+                $this->records[] = $transaction;
             }
-            call_user_func($this->RequestTransactionsHistory,null);
         }
     }
 
@@ -71,24 +74,6 @@ class DataContainer implements TransactionDataContainer{
             throw new DataProcessingException("Subscription failed. Callback provided is invalid", DataProcessingExceptionCode::INVALID_DATA_SUPPLIED);
         }
     }
-
-
-
-    private function requestData(): void {
-        if ($this->onDataRequested != null) {
-            $transactions =  call_user_func($this->onDataRequested);
-            if (count($transactions)>0) {
-                if (!$transactions[0] instanceof TransactionDataClass) {
-                    throw new DataProcessingException("Data requested must be an array of TransactionDataClass objects", DataProcessingExceptionCode::INVALID_DATA_SUPPLIED);
-                }
-                foreach ($transactions as $transaction) {
-                    $transaction->setOnUpdatedCallback([$this, 'onTransactionUpdated']);
-                    $this->records[] = $transaction;
-                }
-            }
-        }
-    }
-
 
     /**
      * @return array[TransactionDataClass] The records in the container.
@@ -114,14 +99,6 @@ class DataContainer implements TransactionDataContainer{
         }
     }
 
-    /**
-     * Subscribe to record  updates  of the container.
-     *
-     * @param callable $callback The callback to subscribe.
-     */
-    function subscribeUpdates(callable $callback):void{
-        $this->onRecordUpdated = Closure::fromCallable($callback);
-    }
 
     /**
      * Registers a new transaction.
@@ -174,6 +151,11 @@ class DataContainer implements TransactionDataContainer{
      */
     function getByPropertyValue(string $property, mixed $value):array{
         $filtered =  $this->getRecordsByProperty($property, $value);
+        if(count($filtered) == 0){
+            LoggingService::event("No data found for {$property} with value in the container {$value}");
+            LoggingService::info("Looking in database");
+
+        }
         return $filtered;
     }
 

@@ -3,8 +3,8 @@
 namespace SmartDownloader\Services\ListenerService\Enums;
 
 enum  ListenerTasks: int {
-    case DOWNLOAD_STARTED  = 1;
-    case DOWNLOAD_PAUSED   = 2;
-    case DOWNLOAD_RESUMED  = 3;
-    case DOWNLOAD_CANCELLED = 4;
+    case ON_START  = 1;
+    case ON_PAUSE   = 2;
+    case ON_RESUME  = 3;
+    case ON_CANCEL = 4;
 }

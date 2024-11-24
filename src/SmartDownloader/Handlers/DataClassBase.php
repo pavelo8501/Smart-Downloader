@@ -6,6 +6,7 @@ use SmartDownloader\Exceptions\DataProcessingException;
 use SmartDownloader\Exceptions\DataProcessingExceptionCode;
 use SmartDownloader\Exceptions\OperationsException;
 use SmartDownloader\Exceptions\OperationsExceptionCode;
+use SmartDownloader\Services\DownloadService\Enums\TransactionStatus;
 use SmartDownloader\Services\LoggingService\LoggingService;
 
 abstract class DataClassBase {
@@ -21,8 +22,11 @@ abstract class DataClassBase {
     }
 
     public function notifyUpdated(DataClassBase $sourceObject):void{
-
         call_user_func($this->onUpdatedCallback, $sourceObject);
+    }
+
+    public function getKeyProperties():array{
+        return $this->keyProperties;
     }
 
     public function setOnUpdatedCallback(callable $onUpdateCallback):void{
@@ -56,17 +60,16 @@ abstract class DataClassBase {
        }
         return $result;
     }
-    public function initFromAssociative(array $data){
+
+    public function initFromAssociative(array $data): void{
         foreach ($data as $key => $value){
             if(array_key_exists($key, $this->keyProperties)){
-                $this->{$key} = $value;
-            }else{
-                if(!property_exists($this, $key)){
-                    LoggingService::warn("Failed to initialize property {$key} for TransactionDataClass");
+                if($key == "status"){
+                   $this->{$key} = TransactionStatus::from($value);
+                }else{
+                    $this->{$key} = $value;
                 }
             }
         }
     }
-
-
 }

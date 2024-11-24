@@ -6,6 +6,12 @@ use SmartDownloader\Services\LoggingService\Enums\LogLevel;
 
 class ServiceConfiguration {
 
+    public  ConfigProperties $properties;
+
+    public function __construct(
+    ) {
+        $this->properties = new ConfigProperties();
+    }
 
     /**
      * Subscribes to logging events with a specified minimum log level and a callback function.
@@ -13,6 +19,9 @@ class ServiceConfiguration {
      * @param callable(LogLevel, string, string): void $callbackFunction The function to be called when a log event occurs.
      * @return void
      */
+
+
+
     public function subscribeLogging(LogLevel $minLogLevel, callable $callbackFunction){
 
     }
