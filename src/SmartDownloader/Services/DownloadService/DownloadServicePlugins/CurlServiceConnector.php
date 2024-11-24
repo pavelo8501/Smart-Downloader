@@ -60,7 +60,6 @@ class CurlServiceConnector implements DownloadConnectorInterface
 
     public function readHeader(DownloadDataClass $data_reader): CurlHandle|DataProcessingException
     {
-
         $fileName = basename(parse_url($this->file_url, PHP_URL_PATH));
         $filePath = $this->file_path . '/' . $fileName;
         $file = fopen($filePath, 'a');

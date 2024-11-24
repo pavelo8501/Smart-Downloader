@@ -45,7 +45,7 @@ class TransactionDataClass  extends DataClassBase
     }
 
     private function addTransactionData(array $data): void{
-       array_push($this->transactionData ,$data);
+       $this->transactionData[] =  $data;
         if($this->file_size == 0 && $data["bytes_read_to"] > 0){
             $this->file_size = $data["bytes_read_to"];
         }

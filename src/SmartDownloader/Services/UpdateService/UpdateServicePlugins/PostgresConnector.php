@@ -3,11 +3,8 @@
 namespace SmartDownloader\Services\UpdateService\UpdateServicePlugins;
 
 use PDO;
-use SmartDownloader\Exceptions\OperationsException;
-use SmartDownloader\Exceptions\OperationsExceptionCode;
 use SmartDownloader\Services\DownloadService\Models\TransactionDataClass;
-use SmartDownloader\Services\UpdateService\Interfaces\UpdateConnectorInterface;
-use SmartDownloader\SmartDownloader;
+
 
 class PostgresConnector extends PDOCommonConnector{
 

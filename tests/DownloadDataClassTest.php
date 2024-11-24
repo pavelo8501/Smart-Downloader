@@ -17,7 +17,7 @@ class DownloadDataClassTest extends TestCase
     public function testSetNextRead(){
         $downloadData = new DownloadDataClass();
         $downloadData->chunk_size = 1024;
-        $downloadData->bytes_max = 4096;
+        $downloadData->file_size = 4096;
 
         $downloadData->setNextRead(1024, 'some bytes');
         $this->assertEquals(1024, $downloadData->bytes_transferred);
@@ -35,7 +35,7 @@ class DownloadDataClassTest extends TestCase
     public function testSetNextReadStopsDownloadWhenBytesReadLessThanChunkSize(){
         $downloadData = new DownloadDataClass();
         $downloadData->chunk_size = 1024;
-        $downloadData->bytes_max = 4096;
+        $downloadData->file_size = 4096;
 
         $downloadData->setNextRead(512, 'some bytes');
         $this->assertTrue($downloadData->stop_download);
@@ -44,7 +44,7 @@ class DownloadDataClassTest extends TestCase
     public function testSetNextReadStopsDownloadWhenBytesMaxExceeded(){
         $downloadData = new DownloadDataClass();
         $downloadData->chunk_size = 1024;
-        $downloadData->bytes_max = 2048;
+        $downloadData->file_size = 2048;
 
         $downloadData->setNextRead(1024, 'some bytes');
         $this->assertFalse($downloadData->stop_download);

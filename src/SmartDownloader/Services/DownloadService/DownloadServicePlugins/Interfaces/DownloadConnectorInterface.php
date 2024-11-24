@@ -7,15 +7,17 @@ namespace SmartDownloader\Services\DownloadService\DownloadServicePlugins\Interf
 use CurlHandle;
 use CurlMultiHandle;
 use SmartDownloader\Exceptions\DataProcessingException;
+use SmartDownloader\Exceptions\OperationsException;
 use SmartDownloader\Exceptions\OperationsExceptionCode;
+use SmartDownloader\Services\DownloadService\Enums\TransactionStatus;
 use SmartDownloader\Services\DownloadService\Models\DownloadDataClass;
 
 interface DownloadConnectorInterface{
     public function retryLoop(CurlHandle $ch, DownloadDataClass $data_reader);
 
-    public function readHeader(DownloadDataClass $data_reader): CurlHandle|DataProcessingException|null;
+    public function readAsync (array $urls, DownloadDataClass $data_reader);
 
-    public function readFile(CurlHandle $ch, string $file_url, DownloadDataClass $data_reader): bool|OperationsExceptionCode|null;
+    public function readSync(DownloadDataClass $data_reader): CurlHandle|DataProcessingException;
+    public function initializeDownload(callable $connector_configuration): null | OperationsException;
 
-    public function freeResources($ch, $file, $data_reader);
 }

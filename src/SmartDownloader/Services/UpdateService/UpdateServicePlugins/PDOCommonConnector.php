@@ -116,13 +116,13 @@ abstract class PDOCommonConnector implements UpdateConnectorInterface {
     protected function patchTransaction(TransactionDataClass $transaction):int{
         $this->initConnector();
         try {
-            $transactionDataJson = json_encode($transaction->transactionData);
+            $transaction_data = json_encode($transaction->transactionData);
             $sql = $this->strForSql("UPDATE  transactions
-            SET  bytes_saved = :bytes_saved , status = :status, transaction_data = :transaction_data,
-            can_resume = :can_resume WHERE id = :id");
+            SET  bytes_saved = :bytes_saved , status = :status, transaction_data = :transaction_data, can_resume = :can_resume WHERE id = :id");
             $stmt = $this->db_connector->prepare($sql);
-            $stmt->execute([$transaction->bytes_saved, $transaction->status->value, $transactionDataJson,
+            $stmt->execute([$transaction->bytes_saved, $transaction->status->value, $transaction_data,
                 $transaction->can_resume, $transaction->id]);
+
             return $transaction->id;
         }catch (\Exception $exception){
             throw  new DataProcessingException($exception->getMessage(), DataProcessingExceptionCode::DATASOURCE_SELECT_FAIL );

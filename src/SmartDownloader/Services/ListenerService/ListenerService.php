@@ -5,6 +5,7 @@ namespace SmartDownloader\Services\ListenerService;
 use Closure;
 use Exception;
 use PhpParser\Node\Expr\Throw_;
+use SmartDownloader\Enumerators\ChunkSize;
 use SmartDownloader\Enumerators\RateExceedAction;
 use SmartDownloader\Exceptions\OperationsException;
 use SmartDownloader\Exceptions\OperationsExceptionCode;
@@ -77,17 +78,20 @@ class ListenerService{
         $config =  $this->parent->configuration->properties;
         $downloadRequest = new DownloadRequest();
         $downloadRequest->file_url = $request->file_url;
-        $downloadRequest->file_path = "{$config->download_dir}/filename.ext";
+        $downloadRequest->file_path =  $config->temp_dir;
         $newTransaction = $this->transactionContainer->registerNew($downloadRequest);
+        $newTransaction->chunk_size =ChunkSize::MB_5->value;
+        $newTransaction->retry_await_time = $config->retry_await_time;
         if($count >  $config->max_downloads && $config->rate_exceed_action == RateExceedAction::QUE){
             $newTransaction->status = TransactionStatus::SUSPENDED;
         }
         if($count >  $config->max_downloads && $config->rate_exceed_action == RateExceedAction::CANCEL) {
             ListenerService::reportRejected($newTransaction);
         }
+
         $this->notifyOnTask(ListenerTasks::ON_START, $newTransaction);
         $this->parent->issueCommand("downloader", "start", $newTransaction);
-        sleep(3);
+
         $this->parent->issueCommand("downloader", "stop", $newTransaction);
     }
 

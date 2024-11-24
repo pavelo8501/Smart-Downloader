@@ -63,16 +63,15 @@ class SmartDownloader {
         switch($source){
             case "downloader":
                 switch($type){
-                    case "start":
-                    {
-                        ($this->fileDownloadService == null) ?? $this->fileDownloadService = new FileDownloadService($this);
-                        $this->fileDownloadService->onRequestReceived("start", $data_object);
-                        break;
+                    case "start":{
+                        if($this->fileDownloadService == null){
+                            $this->fileDownloadService = new FileDownloadService($this);
+                            $this->fileDownloadService->onRequestReceived("start", $data_object);
+                        }
                     }
+                        break;
                     case "stop" : {
-                           if ($this->fileDownloadService != null){
-                               $this->fileDownloadService->onRequestReceived("stop",null);
-                           }
+                        $this->fileDownloadService?->sendCommand("stop");
                     }
                     break;
                 }
@@ -138,9 +137,5 @@ class SmartDownloader {
         }
         $this->listenerService->processRequest($request, $config_array);
         LoggingService::info("Request {$request->action} processed");
-
-
     }
-
-
 }

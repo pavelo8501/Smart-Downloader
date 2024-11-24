@@ -22,6 +22,7 @@ abstract class DataClassBase {
     }
 
     public function notifyUpdated(DataClassBase $sourceObject):void{
+
         call_user_func($this->onUpdatedCallback, $sourceObject);
     }
 
@@ -39,7 +40,6 @@ abstract class DataClassBase {
 
 
     public function copyData(DataClassBase $toSource, $strict = false): DataClassBase{
-
         foreach ($this->keyProperties as $key => $value ){
             if(array_key_exists ($key, $toSource->keyProperties)){
                 $toSource->{$key} = $this->{$key};

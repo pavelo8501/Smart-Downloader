@@ -106,11 +106,14 @@ class DataContainer implements TransactionDataContainer{
      * @param DownloadRequest $download The download request to register.
      * @return TransactionDataClass The registered transaction.
      */
-    function registerNew(DownloadRequest $download):TransactionDataClass{
-        
+    function registerNew(DownloadRequest $download):TransactionDataClass
+    {
+
         $newTransaction = new TransactionDataClass();
         $download->copyData($newTransaction);
         $newTransaction->setOnUpdatedCallback([$this, 'onTransactionUpdated']);
+
+        call_user_func($this->dataRequestCallback, DataOperationType::Save, $newTransaction);
         $this->records[] = $newTransaction;
         return $newTransaction;
     }
