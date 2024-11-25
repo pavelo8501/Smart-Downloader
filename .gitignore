@@ -11,6 +11,9 @@ src/config/
 src/bootstrap.php
 src/index.php
 src/composer.php
-sd-laravel
-sd_symphony
 .env
+downloads/
+bfg.jar
+.git.bfg-report/
+application.php
+.phpunit.result.cache

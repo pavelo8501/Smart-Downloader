@@ -3,13 +3,11 @@
 namespace SmartDownloader;
 
 use Closure;
-use Fiber;
 use PDO;
 use SmartDownloader\Exceptions\DataProcessingException;
 use SmartDownloader\Exceptions\OperationsException;
-use SmartDownloader\Exceptions\OperationsExceptionCode;
 use SmartDownloader\Models\ApiRequest;
-use SmartDownloader\Models\SDConfiguration;
+use SmartDownloader\Models\ConfigProperties;
 use SmartDownloader\Models\ServiceConfiguration;
 use SmartDownloader\Services\DownloadService\DownloadServicePlugins\CurlServiceConnector;
 use SmartDownloader\Services\DownloadService\FileDownloadService;
@@ -21,24 +19,25 @@ use SmartDownloader\Services\UpdateService\Interfaces\UpdateConnectorInterface;
 use SmartDownloader\Services\UpdateService\UpdateService;
 use SmartDownloader\Services\ListenerService\Models\DataContainer;
 use SmartDownloader\Services\UpdateService\UpdateServicePlugins\PostgresConnector;
-use SmartDownloader\Services\UpdateService\UpdateServicePlugins\SqlCommonConnector;
+use SmartDownloader\Services\UpdateService\UpdateServicePlugins\PDOCommonConnector;
 
 class SmartDownloader {
 
     public  LoggingService $logger;
-    public  SDConfiguration $config;
 
-    private static ListenerService $listenerServices;
+    public ServiceConfiguration $configuration;
+
     private ?DataContainer $dataContainer = null;
+
+    protected ?FileDownloadService $fileDownloadService = null;
+
     protected ?UpdateService $updateService = null;
-    private static ListenerService $listenerService ;
+    private  ListenerService $listenerService ;
 
     protected UpdateConnectorInterface $connector;
 
-    protected  array $fibers = [];
 
     protected PDO $pdo;
-
 
     /**
      * @throws OperationsException
@@ -46,25 +45,47 @@ class SmartDownloader {
      */
     public function __construct(?UpdateConnectorInterface $connector = null){
         $this->logger = new LoggingService();
+        $this->connector = $connector;
         if($connector == null){
             $this->pdo = new PDO("pgsql:host={$_ENV['DB_HOST']};port={$_ENV['DB_PORT']};dbname={$_ENV['DB_DATABASE']}",
                 $_ENV['DB_USERNAME'], $_ENV['DB_PASSWORD']);
             $this->pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
             $this->connector = new PostgresConnector($this->pdo);
         }
-        $this->config = new SDConfiguration();
+       // $this-> config = new ConfigProperties();
+        $this->configuration = new ServiceConfiguration();
         $this->initUpdater();
         $this->initDataContainer();
         $this->initListener();
     }
 
-    public  function getFiberByProcessId(int $processId): Fiber{
-       return  $this->fibers[$processId];
+    public function issueCommand($source, $type, mixed $data_object){
+        switch($source){
+            case "downloader":
+                switch($type){
+                    case "start":{
+                        if($this->fileDownloadService == null){
+                            $this->fileDownloadService = new FileDownloadService($this);
+                            $this->fileDownloadService->onRequestReceived("start", $data_object);
+                        }
+                    }
+                        break;
+                    case "stop" : {
+                        $this->fileDownloadService?->sendCommand("stop");
+                    }
+                    break;
+                }
+        }
+    }
+    public function configure(callable $call): void{
+        $configuration = $this->configuration;
+        $call($configuration);
+        $this->configuration = $configuration;
     }
 
-    public function initUpdater(SqlCommonConnector $connector = null): UpdateService {
-        if($this->updateService === null) {
-            if($connector){
+    public function initUpdater(?PDOCommonConnector $connector = null): UpdateService {
+        if($this->updateService == null) {
+            if($connector != null){
                 $this->updateService = new UpdateService($connector);
             }else{
                 $this->updateService = new UpdateService($this->connector);
@@ -73,39 +94,24 @@ class SmartDownloader {
         return $this->updateService;
     }
 
-    private function fiberInitialization(TransactionDataClass $transaction):int{
-        $fiber = new Fiber(function ($transaction):  void {
-            echo "Executing inside Fiber...\n";
-            $downloader  = new FileDownloadService(new CurlServiceConnector());
-            $data = Fiber::suspend("Waiting for data...");
-            $downloader->start($transaction);
-        });
-        $process_index = count($this->fibers);
-        $this->fibers[$process_index] = $fiber;
-        return $process_index;
-    }
-
     protected function initListener(): void {
-        self::$listenerService = new ListenerService($this, $this->dataContainer);
-        self::$listenerService->subscribeTasksInitaiated(ListenerTasks::DOWNLOAD_STARTED, function (ListenerTasks $task, TransactionDataClass $transaction ) {
-            if($task == ListenerTasks::DOWNLOAD_STARTED){
-                LoggingService::info("Listener: New download task initiated");
-                $process_index = $this->fiberInitialization($transaction);
-                 $reported_value =  $this->fibers[$process_index]->start($transaction);
-                  while ($this->fibers[$process_index]->isSuspended()) {
-                      $response["status"] = "ok";
-                      $json_output = json_encode($response);
-                      http_response_code(response_code: 200);
-                      echo $json_output;
-                      $this->fibers[$process_index]->resume();
-                  }
-                var_dump($reported_value);
-                LoggingService::info("Listener: download processing");
-            }
+        $this->listenerService = new ListenerService($this, $this->dataContainer);
+        $this->listenerService->subscribeTasksInitiated(ListenerTasks::ON_START, function (ListenerTasks $task, TransactionDataClass $transaction) {
+            http_response_code(200);
+            echo ListenerService::reportResult($transaction, $task);
+            sleep(10);
         });
-
-        self::$listenerService->subscribeTasksInitaiated(ListenerTasks::DOWNLOAD_PAUSED, function (ApiRequest $request) {
-            $this->fibers[0]->resume($request);
+        $this->listenerService->subscribeTasksInitiated(ListenerTasks::ON_PAUSE, function (ListenerTasks $task, TransactionDataClass $transaction) {
+            http_response_code(200);
+            echo ListenerService::reportResult($transaction, $task);
+        });
+        $this->listenerService->subscribeTasksInitiated(ListenerTasks::ON_RESUME, function (ListenerTasks $task, TransactionDataClass $transaction) {
+            http_response_code(200);
+            echo ListenerService::reportResult($transaction, $task);
+        });
+        $this->listenerService->subscribeTasksInitiated(ListenerTasks::ON_CANCEL, function (ListenerTasks $task, TransactionDataClass $transaction) {
+            http_response_code(200);
+            echo ListenerService::reportResult($transaction, $task);
         });
     }
 
@@ -114,9 +120,8 @@ class SmartDownloader {
      * @throws DataProcessingException
      */
     protected function initDataContainer(): void{
-         $this->dataContainer = new  DataContainer([$this->updateService, "onGetTransactions"], null);
-         $this->dataContainer->subscribeToTransactionUpdates([$this->updateService, "onUpdateTransaction"], "updateService");
-         $this->dataContainer->subscribeToTransactionUpdates([$this->updateService, "onUpdateTransaction"], "updateService");
+         $this->dataContainer = new  DataContainer([$this->updateService, "onDataRequested"]);
+         $this->dataContainer->subscribeToTransactionUpdates([$this->updateService, "saveTransaction"], "updateService");
     }
 
     public function getRequest(ApiRequest | array $request):void{
@@ -128,16 +133,9 @@ class SmartDownloader {
         }
         $config_array = null;
         if($request->action == "start"){
-            $config_array =  $this->config->getConfigurationArray();
+            $config_array =  $this->configuration->properties->getConfigurationArray();
         }
-        self::$listenerService->processRequest($request, $config_array);
+        $this->listenerService->processRequest($request, $config_array);
         LoggingService::info("Request {$request->action} processed");
-        $newRequest = ["action"=>"stop", "file_url" => "https://storage.googleapis.com/public_test_access_ae/output_60sec.mp4"];
-        $this->getRequest($newRequest);
-    }
-
-    public function configure(Closure $context) {
-        $config = new ServiceConfiguration();
-        $context->call($config); // Binds $this inside the closure to $config
     }
 }

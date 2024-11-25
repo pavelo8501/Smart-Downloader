@@ -16,6 +16,7 @@ enum DataProcessingExceptionCode : int {
     case DATASOURCE_SELECT_FAIL = 11;
     case DATASOURCE_UPDATE_FAIL = 12;
     case DATASOURCE_CREATE_FAIL = 13;
+    case DATASOURCE_DELETE_FAIL = 14;
 }
 
 

@@ -10,6 +10,7 @@ class DownloadRequest extends DataClassBase{
     public string $request_url = "";
     public string $file_path= "";
 
+
     protected array $keyProperties = ["file_url" => "", "request_url" => "", "file_path"=> ""];
 
     public function __construct(){

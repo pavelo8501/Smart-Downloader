@@ -23,7 +23,7 @@ class ListenerServiceTest extends TestCase {
             echo "Task initiated: " . $task . " with transaction: " . $transaction;
         };
 
-        $this->listenerService->subscribeTasksInitaiated($callback);
+        $this->listenerService->subscribeTasksInitiated($callback);
 
         $reflection = new ReflectionClass($this->listenerService);
         $property = $reflection->getProperty('onTaskInitiated');

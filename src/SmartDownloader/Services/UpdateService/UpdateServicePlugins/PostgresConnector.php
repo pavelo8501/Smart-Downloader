@@ -3,13 +3,10 @@
 namespace SmartDownloader\Services\UpdateService\UpdateServicePlugins;
 
 use PDO;
-use SmartDownloader\Exceptions\OperationsException;
-use SmartDownloader\Exceptions\OperationsExceptionCode;
 use SmartDownloader\Services\DownloadService\Models\TransactionDataClass;
-use SmartDownloader\Services\UpdateService\Interfaces\UpdateConnectorInterface;
-use SmartDownloader\SmartDownloader;
 
-class PostgresConnector extends SqlCommonConnector implements UpdateConnectorInterface{
+
+class PostgresConnector extends PDOCommonConnector{
 
     public function __construct(PDO $db){
         parent::__construct($db);
@@ -23,11 +20,20 @@ class PostgresConnector extends SqlCommonConnector implements UpdateConnectorInt
               return $transaction->id;
         }
     }
-    public function getTransactions():array | null{
-        return $this->fetchTransactions();
+    public function getTransactions(array $transactions):array | null{
+        return $this->select($transactions);
     }
 
     public function getTransaction(int $transaction_id) :?TransactionDataClass{
        return  $this->pickTransaction($transaction_id);
     }
+
+    public function deleteTransactions(array $transactions): bool{
+        $result = array_map(function($transaction) use($transactions){
+            return  ["id"=>$transaction->id];
+         },$transactions);
+        $this->delete("transactions", $result);
+        return true;
+    }
+
 }

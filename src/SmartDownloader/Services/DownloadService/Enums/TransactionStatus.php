@@ -8,4 +8,5 @@ enum TransactionStatus: int{
     case SUSPENDED = 2;
     case COMPLETE = 3;
     case FAILED = 4;
+    case CORRUPTED = 5;
 }

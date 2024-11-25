@@ -29,9 +29,11 @@ class TransactionDataClass  extends DataClassBase
 
     public int $file_size = 0;
 
+    public int $retry_await_time = 0;
+
     protected ?DownloadDataClass $downloadDataClass = null;
 
-    protected array $keyProperties = ["id"=> 0 , "file_url" => "", "chunk_size" => "", "file_path" => "", "bytes_saved" => 0 ];
+    protected array $keyProperties = ["id"=> 0 , "file_url" => "", "file_path" => "", "bytes_saved" => "", "status" => 0, "can_resume", "file_size"];
 
     public function __construct(array $property_values = null){
         if(is_array($property_values)){
@@ -43,7 +45,7 @@ class TransactionDataClass  extends DataClassBase
     }
 
     private function addTransactionData(array $data): void{
-       array_push($this->transactionData ,$data);
+       $this->transactionData[] =  $data;
         if($this->file_size == 0 && $data["bytes_read_to"] > 0){
             $this->file_size = $data["bytes_read_to"];
         }

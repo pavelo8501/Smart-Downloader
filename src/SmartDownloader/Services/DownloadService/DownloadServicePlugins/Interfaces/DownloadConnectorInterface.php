@@ -4,35 +4,20 @@
 namespace SmartDownloader\Services\DownloadService\DownloadServicePlugins\Interfaces;
 
 
+use CurlHandle;
+use CurlMultiHandle;
+use SmartDownloader\Exceptions\DataProcessingException;
+use SmartDownloader\Exceptions\OperationsException;
+use SmartDownloader\Exceptions\OperationsExceptionCode;
+use SmartDownloader\Services\DownloadService\Enums\TransactionStatus;
 use SmartDownloader\Services\DownloadService\Models\DownloadDataClass;
 
-interface DownloadConnectorInterface {
+interface DownloadConnectorInterface{
+    public function retryLoop(CurlHandle $ch, DownloadDataClass $data_reader);
 
-    /**
-     * Downloads a file from the given URL.
-     *
-     * @param string $url The URL of the file to download.
-     * @param DownloadDataClass $download_data An instance of DownloadDataClass containing download data.
-     * @param callable $reportStatusCallback A callback function to report the status of the download.
-     * @param callable $handleProgress A callback function to handle the progress of the download.
-     *
-     * @return void
-     */
-    public function downloadFile(string $url, DownloadDataClass $download_data, callable $reportStatus, callable $handleProgress): void;
-    
-    /**
-     * Performs a lookup of the headers for the given URL.
-     *
-     * @param string $url The URL to lookup headers for.
-     * @return mixed The headers of the given URL.
-     */
-    public function headerLookup(string $url);
+    public function readAsync (array $urls, DownloadDataClass $data_reader);
 
-    /**
-     * Stops the download process.
-     *
-     * @param string $message The message to display when stopping the download.
-     * @return void
-     */
-    public function stopDownload(string $message = ""): void;
+    public function readSync(DownloadDataClass $data_reader): CurlHandle|DataProcessingException;
+    public function initializeDownload(callable $connector_configuration): null | OperationsException;
+
 }
