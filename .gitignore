@@ -16,3 +16,4 @@ downloads/
 bfg.jar
 .git.bfg-report/
 application.php
+.phpunit.result.cache
